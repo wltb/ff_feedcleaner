@@ -23,8 +23,8 @@ class ff_FeedCleaner extends Plugin implements IHandler
 	{
 		$this->host = $host;
 
-		if (version_compare(VERSION_STATIC, '1.7.10', '<') && VERSION_STATIC === VERSION){
-			user_error('Hooks not registered. Needs trunk or version >= 1.7.10', E_USER_WARNING);
+		if (version_compare(VERSION_STATIC, '1.8', '<')){
+			user_error('Hooks not registered. Needs at least version 1.8', E_USER_WARNING);
 			return;
 		}
 		
