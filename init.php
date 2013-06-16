@@ -1,5 +1,17 @@
 <?php
 
+function apply_regex($feed_data, $config)
+{
+	$pat = $config["pattern"];
+	$rep = $config["replacement"];
+	
+	$feed_data_mod = preg_replace($pat, $rep, $feed_data);
+	if($feed_data_mod)
+		$feed_data = $feed_data_mod;
+	
+	return $feed_data;
+}
+
 class ff_FeedCleaner extends Plugin implements IHandler
 {
 	private $host;
@@ -40,7 +52,6 @@ class ff_FeedCleaner extends Plugin implements IHandler
 	//implement fetch hooks
 	function hook_feed_fetched($feed_data, $fetch_url, $owner_uid, $feed_id)
 	{
-
 		$json_conf = $this->host->get($this, 'json_conf');
 		$data = json_decode($json_conf, true);
 
@@ -53,19 +64,15 @@ class ff_FeedCleaner extends Plugin implements IHandler
 			if(preg_match($url_match, $fetch_url) === 1 ){
 				switch ($config["type"]) {
 					case "regex":
-						$pat = $config["pattern"];
-						$rep = $config["replacement"];
-						$feed_data_mod = preg_replace($pat, $rep, $feed_data);
-						if($feed_data_mod)
-							$feed_data = $feed_data_mod;
+						$feed_data = apply_regex($feed_data, $config);
 						break;
 					default:
 						continue;
 				}
 			}
 		}
+		
 		return $feed_data;
-
 	}
 
 	/*
