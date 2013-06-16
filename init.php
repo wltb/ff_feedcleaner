@@ -38,7 +38,7 @@ class ff_FeedCleaner extends Plugin implements IHandler
 	
 
 	//implement fetch hooks
-	function hook_feed_fetched($feed_data, $fetch_url, $owner_uid)
+	function hook_feed_fetched($feed_data, $fetch_url, $owner_uid, $feed_id)
 	{
 
 		$json_conf = $this->host->get($this, 'json_conf');
@@ -53,9 +53,11 @@ class ff_FeedCleaner extends Plugin implements IHandler
 			if(preg_match($url_match, $fetch_url) === 1 ){
 				switch ($config["type"]) {
 					case "regex":
-						$rep = preg_replace($config["pattern"], $config["replacement"], $feed_data);
-						if($rep)
-							$feed_data = $rep;
+						$pat = $config["pattern"];
+						$rep = $config["replacement"];
+						$feed_data_mod = preg_replace($pat, $rep, $feed_data);
+						if($feed_data_mod)
+							$feed_data = $feed_data_mod;
 						break;
 					default:
 						continue;
@@ -67,7 +69,7 @@ class ff_FeedCleaner extends Plugin implements IHandler
 	}
 
 	/*
-	function hook_fetch_feed($feed_data, $fetch_url, $owner_uid){
+	function hook_fetch_feed($feed_data, $fetch_url, $owner_uid, $feed_id){
 		return false;
 	}
 	*/
@@ -106,7 +108,7 @@ class ff_FeedCleaner extends Plugin implements IHandler
 		$pluginhost = PluginHost::getInstance();
 		$json_conf = $pluginhost->get($this, 'json_conf');
 
-		print "<form dojoType=\"dijit.form.Form\">";
+		print '<form dojoType="dijit.form.Form" accept-charset="UTF-8">';
 
 		print "<script type=\"dojo/method\" event=\"onSubmit\" args=\"evt\">
 			evt.preventDefault();
