@@ -12,6 +12,32 @@ function apply_regex($feed_data, $config)
 	return $feed_data;
 }
 
+function apply_xpath_regex($feed_data, $config)
+{
+	$doc = new DOMDocument();
+	$doc->loadXML($feed_data);
+	
+	$xpath = new DOMXPath($doc);
+	$node_list = $xpath->query($config['xpath']);
+	
+	$pat = $config["pattern"];
+	$rep = $config["replacement"];
+	
+	foreach($node_list as $node) {
+		if(array_key_exists('attribute', $config)) {
+			$attr = $config['attribute'];
+			$attr_value = preg_replace($pat, $rep, $node->getAttribute($attr));
+			$node->setAttribute($attr, $attr_value);
+		}
+		else {
+			$node_text = $doc->createTextNode(preg_replace($pat, $rep, $node->textContent));
+    		$node->nodeValue = "";
+    		$node->appendChild($node_text);
+		}
+	}
+	return $doc->saveXML();
+}
+
 class ff_FeedCleaner extends Plugin
 {
 	private $host;
@@ -64,6 +90,9 @@ class ff_FeedCleaner extends Plugin
 				switch ($config["type"]) {
 					case "regex":
 						$feed_data = apply_regex($feed_data, $config);
+						break;
+					case "xpath_regex":
+						$feed_data = apply_xpath_regex($feed_data, $config);
 						break;
 					default:
 						continue;
