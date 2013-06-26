@@ -12,7 +12,7 @@ function apply_regex($feed_data, $config)
 	return $feed_data;
 }
 
-class ff_FeedCleaner extends Plugin implements IHandler
+class ff_FeedCleaner extends Plugin
 {
 	private $host;
 
@@ -41,7 +41,6 @@ class ff_FeedCleaner extends Plugin implements IHandler
 		}
 		
 		$host->add_hook($host::HOOK_PREFS_TABS, $this);
-# only allowed for system plugins: $host->add_handler('pref-feedmod', '*', $this);
 		/*
 		$host->add_hook($host::HOOK_FETCH_FEED, $this);
 		*/
@@ -80,33 +79,12 @@ class ff_FeedCleaner extends Plugin implements IHandler
 		return false;
 	}
 	*/
-
-	
-	//IHandler implementation - for GUI
-	function csrf_ignore($method)
-	{
-		$csrf_ignored = array("index", "edit");
-		return array_search($method, $csrf_ignored) !== false;
-	}
-
-	function before($method)
-	{
-		if ($_SESSION["uid"]) {
-			return true;
-		}
-		return false;
-	}
-
-	function after()
-	{
-		return true;
-	}
 	
 	//gui hook stuff
 	function hook_prefs_tabs($args)
 	{
 		print '<div id="' . strtolower(get_class()) . '_ConfigTab" dojoType="dijit.layout.ContentPane"
-			href="backend.php?op=' . strtolower(get_class()) . '"
+			href="backend.php?op=pluginhandler&plugin=' . strtolower(get_class()) . '&method=index"
 			title="' . __('FeedCleaner') . '"></div>';
 	}
 
