@@ -1,5 +1,7 @@
 <?php
 
+include 'converter.php';
+
 function apply_regex($feed_data, $config, $debug = false)
 {
 	$pat = $config["pattern"];
@@ -56,11 +58,26 @@ class ff_FeedCleaner extends Plugin
 {
 	private $host;
 	private $debug = false;
+	private $CONVERT = false;
+
+	function convert_config($host)
+	{
+		if($this->CONVERT === true)
+		{
+			$json_conf = $host->get($this, 'json_conf');
+			$json_conf = convert_format($json_conf);
+			if (!is_null(json_decode($json_conf))) {
+				$host->set($this, 'json_conf', $json_conf);
+			}
+			else
+				user_error("Couldn't convert the configuration", E_USER_ERROR);
+		}
+	}
 
 	function about()
 	{
 		return array(
-			0.4, // version
+			0.8, // version
 			'Applies regular expressions to a feed', // description
 			'feader', // author
 			false, // is_system
@@ -80,7 +97,7 @@ class ff_FeedCleaner extends Plugin
 			user_error('Hooks not registered. Needs at least version 1.8', E_USER_ERROR);
 			return;
 		}
-		
+
 		$host->add_hook($host::HOOK_PREFS_TABS, $this);
 		/*
 		$host->add_hook($host::HOOK_FETCH_FEED, $this);
@@ -92,6 +109,7 @@ class ff_FeedCleaner extends Plugin
 	//implement fetch hooks
 	function hook_feed_fetched($feed_data, $fetch_url, $owner_uid, $feed_id)
 	{
+		$this->convert_config($this->host);
 		$json_conf = $this->host->get($this, 'json_conf');
 		$data = json_decode($json_conf, true);
 
@@ -100,8 +118,19 @@ class ff_FeedCleaner extends Plugin
 			return $feed_data;
 		}
 		
-		foreach($data as $url_match => $config) {
-			if(preg_match($url_match, $fetch_url) === 1 ){
+		foreach($data as $index => $config) {
+			$test = false;
+			
+			//Legacy support
+			if(!is_numeric($index) && !array_key_exists('URL_re', $config))
+				$config['URL_re'] = $index;
+				
+			if(array_key_exists('URL', $config))
+				$test = (strpos($fetch_url, $config['URL']) !== false);
+			else
+				$test = (preg_match($config['URL_re'], $fetch_url) === 1);
+			
+			if( $test ){
 				if($this->debug || $this->host->get_debug())
 					user_error('Modifying ' . $fetch_url . ' with ' . json_encode($config), E_USER_NOTICE);
 				switch (strtolower($config["type"])) {
@@ -137,6 +166,7 @@ class ff_FeedCleaner extends Plugin
 	function index()
 	{
 		$pluginhost = PluginHost::getInstance();
+		$this->convert_config($pluginhost);
 		$json_conf = $pluginhost->get($this, 'json_conf');
 
 		print '<form dojoType="dijit.form.Form" accept-charset="UTF-8">';
