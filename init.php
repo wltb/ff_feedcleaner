@@ -1,18 +1,22 @@
 <?php
 
-function apply_regex($feed_data, $config)
+function apply_regex($feed_data, $config, $debug = false)
 {
 	$pat = $config["pattern"];
 	$rep = $config["replacement"];
 	
-	$feed_data_mod = preg_replace($pat, $rep, $feed_data);
+	$feed_data_mod = preg_replace($pat, $rep, $feed_data, -1, $count);
+	
+	if($debug)
+		user_error('Applied (pattern "' . $pat . '", replacement "' . $rep . '") ' . $count . ' times', E_USER_NOTICE);
+	
 	if($feed_data_mod)
 		$feed_data = $feed_data_mod;
 	
 	return $feed_data;
 }
 
-function apply_xpath_regex($feed_data, $config)
+function apply_xpath_regex($feed_data, $config, $debug = false)
 {
 	$doc = new DOMDocument();
 	$doc->loadXML($feed_data);
@@ -23,24 +27,39 @@ function apply_xpath_regex($feed_data, $config)
 	$pat = $config["pattern"];
 	$rep = $config["replacement"];
 	
+	if($debug)
+		user_error('Found ' . $node_list->length . ' nodes with XPath "' . $config['xpath'] . '"', E_USER_NOTICE);
+		
+	$counter = 0;
 	foreach($node_list as $node) {
 		if(array_key_exists('attribute', $config)) {
 			$attr = $config['attribute'];
-			$attr_value = preg_replace($pat, $rep, $node->getAttribute($attr));
-			$node->setAttribute($attr, $attr_value);
+			$attr_value = preg_replace($pat, $rep, $node->getAttribute($attr), -1, $count);
+			if($attr_value)
+				$node->setAttribute($attr, $attr_value);
 		}
 		else {
-			$node_text = $doc->createTextNode(preg_replace($pat, $rep, $node->textContent));
-    		$node->nodeValue = "";
-    		$node->appendChild($node_text);
+			$text_mod = preg_replace($pat, $rep, $node->textContent, -1, $count);
+			if($text_mod)
+			{
+				$text_node = $doc->createTextNode($text_mod);
+				$node->nodeValue = "";
+				$node->appendChild($text_node);
+			}
 		}
+		$counter += $count;
 	}
+	
+	if($debug)
+		user_error('Applied (pattern "' . $pat . '", replacement "' . $rep . '") ' . $counter . ' times', E_USER_NOTICE);
+	
 	return $doc->saveXML();
 }
 
 class ff_FeedCleaner extends Plugin
 {
 	private $host;
+	private $debug = false;
 
 	function about()
 	{
@@ -62,7 +81,7 @@ class ff_FeedCleaner extends Plugin
 		$this->host = $host;
 
 		if (version_compare(VERSION_STATIC, '1.8', '<')){
-			user_error('Hooks not registered. Needs at least version 1.8', E_USER_WARNING);
+			user_error('Hooks not registered. Needs at least version 1.8', E_USER_ERROR);
 			return;
 		}
 		
@@ -81,18 +100,20 @@ class ff_FeedCleaner extends Plugin
 		$data = json_decode($json_conf, true);
 
 		if (!is_array($data)) {
-			user_error('No or malformed configuration stored', E_USER_WARNING);
+			user_error('No or malformed configuration stored', E_USER_ERROR);
 			return $feed_data;
 		}
 		
 		foreach($data as $url_match => $config) {
 			if(preg_match($url_match, $fetch_url) === 1 ){
-				switch ($config["type"]) {
+				if($this->debug || $this->host->get_debug())
+					user_error('Modifying ' . $fetch_url . ' with ' . json_encode($config), E_USER_NOTICE);
+				switch (strtolower($config["type"])) {
 					case "regex":
-						$feed_data = apply_regex($feed_data, $config);
+						$feed_data = apply_regex($feed_data, $config, $this->debug || $this->host->get_debug());
 						break;
 					case "xpath_regex":
-						$feed_data = apply_xpath_regex($feed_data, $config);
+						$feed_data = apply_xpath_regex($feed_data, $config, $this->debug || $this->host->get_debug());
 						break;
 					default:
 						continue;
