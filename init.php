@@ -39,12 +39,16 @@ function apply_xpath_regex($feed_data, $config, $debug = false)
 				$node->setAttribute($attr, $attr_value);
 		}
 		else {
-			$text_mod = preg_replace($pat, $rep, $node->textContent, -1, $count);
-			if($text_mod)
-			{
-				$text_node = $doc->createTextNode($text_mod);
-				$node->nodeValue = "";
-				$node->appendChild($text_node);
+			if( $node->childNodes->length != 1) {
+				user_error('Node "' . $node->getNodePath() . '" has more then one (or no) child. Modifying the text content of such nodes is not supported at the moment', E_USER_WARNING);
+				continue;
+			}
+			foreach($node->childNodes as $child) {
+				if($child->nodeType == XML_TEXT_NODE) {
+					$text_mod = preg_replace($pat, $rep, $child->textContent, -1, $count);
+					if($text_mod)
+						$child->nodeValue = $text_mod;
+				}
 			}
 		}
 		$counter += $count;
