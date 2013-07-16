@@ -32,23 +32,15 @@ function apply_xpath_regex($feed_data, $config, $debug = false)
 		
 	$counter = 0;
 	foreach($node_list as $node) {
-		if(array_key_exists('attribute', $config)) {
-			$attr = $config['attribute'];
-			$attr_value = preg_replace($pat, $rep, $node->getAttribute($attr), -1, $count);
-			if($attr_value)
-				$node->setAttribute($attr, $attr_value);
+		if( $node->childNodes->length != 1) {
+			user_error('Node "' . $node->getNodePath() . '" has more then one (or no) child. Modifying the text content of such nodes is not supported at the moment', E_USER_WARNING);
+			continue;
 		}
-		else {
-			if( $node->childNodes->length != 1) {
-				user_error('Node "' . $node->getNodePath() . '" has more then one (or no) child. Modifying the text content of such nodes is not supported at the moment', E_USER_WARNING);
-				continue;
-			}
-			foreach($node->childNodes as $child) {
-				if($child->nodeType == XML_TEXT_NODE) {
-					$text_mod = preg_replace($pat, $rep, $child->textContent, -1, $count);
-					if($text_mod)
-						$child->nodeValue = $text_mod;
-				}
+		foreach($node->childNodes as $child) {
+			if($child->nodeType == XML_TEXT_NODE) {
+				$text_mod = preg_replace($pat, $rep, $child->textContent, -1, $count);
+				if($text_mod)
+					$child->nodeValue = $text_mod;
 			}
 		}
 		$counter += $count;
