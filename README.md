@@ -9,7 +9,7 @@ The Tiny Tiny RSS version must be 1.8 or later.
 ##Configuration format changed
 With the release 0.8 of ff_FeedCleaner, the configuration format was changed.
 Old style configurations should still work at the moment, but all users are encouraged to convert their configurations.
-To make this process easier, conversion tools are provided. They are described in [conf_conv.md](https://github.com/wltb/ff_feedcleaner/blob/master/conf_conv.md#Converting-the-configuration).
+To make this process easier, conversion tools are provided. They are described in [conf_conv.md](https://github.com/wltb/ff_feedcleaner/blob/master/conf_conv.md#converting-the-configuration).
 
 ## Installation
 This should be done on the command line
@@ -63,7 +63,7 @@ The *URL_re* value must be a regular expression in the [pcre module style](http:
 If an object contains a *URL* and a *URL_re* key, the *URL* key takes precedence. Generally a *URL_re* key should only be used in specific cases.
 
 It should be noted that the configuration is always UTF-8 encoded.
-This may cause problems if the regular expressions contain non-ASCII characters, and the feed encoding isn't UTF-8.
+This may cause problems if the regular expressions contain non-ASCII characters, and the feed encoding is not UTF-8.
 
 ###Type *regex*
 For this type, two additional keys must be specified: *pattern* and *replacement*.
@@ -78,7 +78,7 @@ With this type, some subtleties have to be regarded.
 
 1. When the feed is loaded, all five [predefined entities](http://www.w3.org/TR/REC-xml/#sec-predefined-ent) are converted to their real values. When saving, only *&*, *<*, *>* and in attributes also *"* are converted back to *&amp;amp;*, *&amp;lt;*, *&amp;gt;* and *&amp;quot;*, respectively.
 2. It may be impossible to apply this type if the feed is not UTF-8 encoded.
-3. Further, at the moment only the manipulation of attributes and "leaf tags" (tags that contain no other tags) is supported; or more technically spoken, of nodes that have only one child which has to be a TextNode. This is an implementation detail that may change in future versions.
+3. Further, at the moment only the manipulation of attributes and "leaf tags" (tags that contain no other tags) is supported; or more technically spoken, of nodes that have only one child which has to be a TextNode. This is an implementation detail that may change in future releases.
 
 ###Examples
 We explain what the entries in the given example configuration do.
