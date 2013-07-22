@@ -18,6 +18,28 @@ function apply_regex($feed_data, $config, $debug = false)
 	return $feed_data;
 }
 
+function enc_utf8($feed_data, $config, $debug = false) {
+	$decl_regex = '/^(<\?xml[\t\n\r ]+version[\t\n\r ]*=[\t\n\r ]*["\']1\.[0-9]+["\'][\t\n\r ]+encoding[\t\n\r ]*=[\t\n\r ]*["\'])([A-Za-z][A-Za-z0-9._-]*)(["\'](?:[\t\n\r ]+standalone[\t\n\r ]*=[\t\n\r ]*["\'](?:yes|no)["\'])?[\t\n\r ]*\?>)/';
+	if (preg_match($decl_regex, $feed_data, $matches) === 1 && $matches[2] != 'UTF-8') {
+		$data = iconv($matches[2], 'UTF-8//IGNORE', $feed_data);
+		
+		if($data !== false)
+		{
+			$feed_data = preg_replace($decl_regex, $matches[1] . "UTF-8" . $matches[3], $data);
+			if($debug)
+				user_error('Encoding conversion to UTF-8 was successful', E_USER_NOTICE);
+		}
+		else
+			user_error("Couldn't convert the encoding", E_USER_WARNING);					
+	}
+	else {
+		if($debug)
+			user_error('No encoding declared or encoding is UTF-8 already', E_USER_NOTICE);
+	}
+
+	return $feed_data;
+}
+
 function apply_xpath_regex($feed_data, $config, $debug = false)
 {
 	$doc = new DOMDocument();
@@ -142,6 +164,10 @@ class ff_FeedCleaner extends Plugin
 					case "xpath_regex":
 						$feed_data = apply_xpath_regex($feed_data, $config, $debug);
 						break;
+					case "utf-8":
+						$feed_data = enc_utf8($feed_data, $config, $debug);
+						break;
+
 					default:
 						continue;
 				}
