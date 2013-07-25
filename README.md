@@ -22,7 +22,8 @@ $ git clone https://github.com/wltb/ff_feedcleaner
 After that, the plugin must be enabled in the preferences of Tiny Tiny RSS.
 
 ## Configuration
-In the preferences, you'll find a new tab called *FeedCleaner* which contains one large text field which is used to enter/modify the configuration data.
+In the preferences, you'll find a new tab called *FeedCleaner* which contains one large text field which is used to enter/modify the configuration data,
+and a checkbox to turn extended logging on and off.
 Basically, the configuration data consists of an unnamed [JSON](http://json.org/) array that contains some unnamed JSON objects. Use the **Save** button to store it.
 
 An example configuration looks like this:
@@ -60,7 +61,7 @@ The *URL* and *URL_re* values are used to select the feeds on which the associat
 To match, the *URL* value must be a substring of the feed URL.
 The *URL_re* value must be a regular expression in the [pcre module style](http://www.php.net/manual/en/book.pcre.php) which is matched against the feed URL with the [preg_match function](http://www.php.net/manual/en/function.preg-match.php).
 
-If an object contains a *URL* and a *URL_re* key, the *URL* key takes precedence. Generally a *URL_re* key should only be used in specific cases.
+If an object contains a *URL* and a *URL_re* key, the *URL_re* key is ignored. Generally a *URL_re* key should only be used in specific cases.
 
 It should be noted that the configuration is always UTF-8 encoded.
 This may cause problems if the regular expressions contain non-ASCII characters, and the feed encoding is not UTF-8.
@@ -109,9 +110,9 @@ It is instructive to compare the two objects with their *regex* cousins that wer
 While these do (roughly) the same, the regular expressions for the *xpath_regex* objects are clearly more elegant, at the expense of finding a nice XPath, of course.
 In the NY Times objects, we also can see the different ways of inserting a "&amp;amp;" into the feed. In the *regex* case, this has to be done literally, with the *xpath_regex*, there must be a "&" in the *replacement* value.
 
-##Logging
-Extended logging can be enabled by changing the *$debug* variable at the start of the *ff_FeedCleaner* class in init.php to *true*, or by enabling the global extended logging in Tiny Tiny RSS.
-Errors are always logged, regardless of the value of *$debug*.
+##Extended Logging
+Extended logging can be enabled by setting the corresponding checkbox in the preferences tab, or by enabling the global extended logging in Tiny Tiny RSS.
+Regardless of these two settings, errors are always logged.
 The log entries go into what you have defined in LOG_DESTINATION in Tiny Tiny RSSes config.php.
 
 If you enable extended (local) logging, the activity of the plugin will be reported with great detail. In particular, if you see no output at all, none of your objects in the configuration matched any of your subscribed feeds.

@@ -57,7 +57,6 @@ function apply_xpath_regex($feed_data, $config, $debug = false)
 class ff_FeedCleaner extends Plugin
 {
 	private $host;
-	private $debug = false;
 	private $CONVERT = false;
 
 	function convert_config($host)
@@ -111,7 +110,10 @@ class ff_FeedCleaner extends Plugin
 	{
 		$this->convert_config($this->host);
 		$json_conf = $this->host->get($this, 'json_conf');
+		
 		$data = json_decode($json_conf, true);
+		$debug_conf = sql_bool_to_bool($this->host->get($this, 'debug', bool_to_sql_bool(FALSE)));
+		$debug = $debug_conf || $this->host->get_debug();
 
 		if (!is_array($data)) {
 			user_error('No or malformed configuration stored', E_USER_ERROR);
@@ -131,14 +133,14 @@ class ff_FeedCleaner extends Plugin
 				$test = (preg_match($config['URL_re'], $fetch_url) === 1);
 			
 			if( $test ){
-				if($this->debug || $this->host->get_debug())
+				if($debug)
 					user_error('Modifying ' . $fetch_url . ' with ' . json_encode($config), E_USER_NOTICE);
 				switch (strtolower($config["type"])) {
 					case "regex":
-						$feed_data = apply_regex($feed_data, $config, $this->debug || $this->host->get_debug());
+						$feed_data = apply_regex($feed_data, $config, $debug);
 						break;
 					case "xpath_regex":
-						$feed_data = apply_xpath_regex($feed_data, $config, $this->debug || $this->host->get_debug());
+						$feed_data = apply_xpath_regex($feed_data, $config, $debug);
 						break;
 					default:
 						continue;
@@ -167,9 +169,16 @@ class ff_FeedCleaner extends Plugin
 	{
 		$pluginhost = PluginHost::getInstance();
 		$this->convert_config($pluginhost);
+		
 		$json_conf = $pluginhost->get($this, 'json_conf');
+		$debug = sql_bool_to_bool($this->host->get($this, "debug", bool_to_sql_bool(FALSE)));
+		if ($debug) {
+			$debugChecked = "checked=\"1\"";
+		} else {
+			$debugChecked = "";
+		}
 
-		print '<form dojoType="dijit.form.Form" accept-charset="UTF-8">';
+		print '<form dojoType="dijit.form.Form" accept-charset="UTF-8" style="overflow:auto;">';
 
 		print "<script type=\"dojo/method\" event=\"onSubmit\" args=\"evt\">
 			evt.preventDefault();
@@ -192,6 +201,11 @@ class ff_FeedCleaner extends Plugin
 		print "<table width='100%'><tr><td>";
 		print "<textarea dojoType=\"dijit.form.SimpleTextarea\" name=\"json_conf\" style=\"font-size: 12px; width: 99%; height: 500px;\">" . htmlspecialchars($json_conf, ENT_NOQUOTES, 'UTF-8') . "</textarea>";
 		print "</td></tr></table>";
+		
+		print "<table width='30%' style=\"border:3px ridge grey;\">";
+		print "<tr><td width=\"95%\"><label for=\"debug_id\">".__("Enable extended logging")."</label></td>";
+		print "<td class=\"prefValue\"><input dojoType=\"dijit.form.CheckBox\" type=\"checkbox\" name=\"debug\" id=\"debug_id\" $debugChecked></td></tr>";
+		print "</table>";
 
 		print "<p><button dojoType=\"dijit.form.Button\" type=\"submit\">".__("Save")."</button>";
 
@@ -206,8 +220,10 @@ class ff_FeedCleaner extends Plugin
 			echo __("error: Invalid JSON!");
 			return false;
 		}
-
+		
 		$this->host->set($this, 'json_conf', $json_conf);
+		$this->host->set($this, 'debug', checkbox_to_sql_bool($_POST["debug"]));
+
 		echo __("Configuration saved.");
 	}
 
