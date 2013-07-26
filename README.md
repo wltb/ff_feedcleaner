@@ -78,8 +78,7 @@ The other keys that are needed are *pattern* and *replacement*. Their meaning is
 With this type, some subtleties have to be regarded.
 
 1. When the feed is loaded, all five [predefined entities](http://www.w3.org/TR/REC-xml/#sec-predefined-ent) are converted to their real values. When saving, only *&*, *<*, *>* and in attributes also *"* are converted back to *&amp;amp;*, *&amp;lt;*, *&amp;gt;* and *&amp;quot;*, respectively.
-2. It may be impossible to apply this type if the feed is not UTF-8 encoded.
-3. Further, at the moment only the manipulation of attributes and "leaf tags" (tags that contain no other tags) is supported; or more technically spoken, of nodes that have only one child which has to be a TextNode. This is an implementation detail that may change in future releases.
+2. Further, at the moment only the manipulation of attributes and "leaf tags" (tags that contain no other tags) is supported; or more technically spoken, of nodes that have only one child which has to be a TextNode. This is an implementation detail that may change in future releases.
 
 ###Examples
 We explain what the entries in the given example configuration do.
@@ -109,6 +108,9 @@ It is instructive to compare the two objects with their *regex* cousins that wer
 
 While these do (roughly) the same, the regular expressions for the *xpath_regex* objects are clearly more elegant, at the expense of finding a nice XPath, of course.
 In the NY Times objects, we also can see the different ways of inserting a "&amp;amp;" into the feed. In the *regex* case, this has to be done literally, with the *xpath_regex*, there must be a "&" in the *replacement* value.
+
+###Type *utf-8*
+This type converts the feed data encoding to UTF-8.
 
 ##Extended Logging
 Extended logging can be enabled by setting the corresponding checkbox in the preferences tab, or by enabling the global extended logging in Tiny Tiny RSS.

@@ -14,7 +14,7 @@ function apply_regex($feed_data, $config, $debug = false)
 	
 	if($feed_data_mod)
 		$feed_data = $feed_data_mod;
-	
+
 	return $feed_data;
 }
 
@@ -30,7 +30,7 @@ function enc_utf8($feed_data, $config, $debug = false) {
 				user_error('Encoding conversion to UTF-8 was successful', E_USER_NOTICE);
 		}
 		else
-			user_error("Couldn't convert the encoding", E_USER_WARNING);					
+			user_error('For ' . json_encode($config) . ": Couldn't convert the encoding", E_USER_WARNING);
 	}
 	else {
 		if($debug)
@@ -61,7 +61,13 @@ function apply_xpath_regex($feed_data, $config, $debug = false)
 	}
 	
 	if($error) {
-		user_error('Case ' . $config . ': Feed couldn\'t be parsed. Parse error ' . $error->code );
+		user_error('For ' . json_encode($config) . ': Feed couldn\'t be parsed', E_USER_WARNING);
+		foreach(libxml_get_errors() as $error) {		
+			user_error(sprintf("LibXML error %s at line %d (column %d): %s",
+				$error->code, $error->line, $error->column,
+				$error->message),
+				E_USER_WARNING);
+		}	
 		return $feed_data;
 	}
 	
@@ -77,7 +83,7 @@ function apply_xpath_regex($feed_data, $config, $debug = false)
 	$counter = 0;
 	foreach($node_list as $node) {
 		if( $node->childNodes->length != 1) {
-			user_error('Node "' . $node->getNodePath() . '" has more then one (or no) child. Modifying the text content of such nodes is not supported at the moment', E_USER_WARNING);
+			user_error('For ' . json_encode($config) . ': Node "' . $node->getNodePath() . '" has more then one (or no) child. Modifying the text content of such nodes is not supported at the moment', E_USER_WARNING);
 			continue;
 		}
 		foreach($node->childNodes as $child) {
@@ -171,8 +177,10 @@ class ff_FeedCleaner extends Plugin
 				
 			if(array_key_exists('URL', $config))
 				$test = (strpos($fetch_url, $config['URL']) !== false);
-			else
+			elseif(array_key_exists('URL_re', $config))
 				$test = (preg_match($config['URL_re'], $fetch_url) === 1);
+			else
+				user_error('For ' . json_encode($config) . ': Neither URL nor URL_re key is present', E_USER_WARNING);
 			
 			if( $test ){
 				if($debug)
@@ -187,7 +195,6 @@ class ff_FeedCleaner extends Plugin
 					case "utf-8":
 						$feed_data = enc_utf8($feed_data, $config, $debug);
 						break;
-
 					default:
 						continue;
 				}
