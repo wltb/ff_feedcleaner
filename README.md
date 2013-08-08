@@ -77,8 +77,8 @@ The other keys that are needed are *pattern* and *replacement*. Their meaning is
 
 With this type, some subtleties have to be regarded.
 
-1. When the feed is loaded, all five [predefined entities](http://www.w3.org/TR/REC-xml/#sec-predefined-ent) are converted to their real values. When saving, only *&*, *<*, *>* and in attributes also *"* are converted back to *&amp;amp;*, *&amp;lt;*, *&amp;gt;* and *&amp;quot;*, respectively.
-2. Further, at the moment only the manipulation of attributes and "leaf tags" (tags that contain no other tags) is supported; or more technically spoken, of nodes that have only one child which has to be a TextNode. This is an implementation detail that may change in future releases.
+1. When the feed is loaded, all five [predefined entities](http://www.w3.org/TR/REC-xml/#sec-predefined-ent) are converted to their real values. When saving, only *&*, *<*, *>* (and in attributes, also *"*) are converted back to *&amp;amp;*, *&amp;lt;*, *&amp;gt;* (and *&amp;quot;*), respectively.
+2. On all text nodes that are gathered with the XPath, the regular expression with *pattern* and *replacement* is directly applied. For all other node types, the regular expression is applied on all their children that are text nodes.
 
 ###Examples
 We explain what the entries in the given example configuration do.
@@ -86,7 +86,7 @@ We explain what the entries in the given example configuration do.
 In the entry with the URL value *http://www.iswintercoming.com/feed.php*, for any feed whose URL contains *http://www.iswintercoming.com/feed.php*, expressions like *sid=a7595fe6a719361152bb96f8a0bd48b5* (a *sid=* followed by 32 hexadecimal digits) are deleted from the feed data.
 
 The other two entries are useful in conjunction with [af_feedmod](https://github.com/mbirth/ttrss_plugin-af_feedmod).
-They amend the article links such that they point to a web page with the full article content, so that it can be fetched instead of a segment.
+They amend the article links such that they point to a web page with the full article content, so that it can be fetched instead of just a segment.
 It is instructive to compare the two objects with their *regex* cousins that were featured in an earlier version of this document.
 
 ```json
@@ -113,9 +113,9 @@ In the NY Times objects, we also can see the different ways of inserting a "&amp
 This type converts the feed data encoding to UTF-8.
 
 ##Extended Logging
-Extended logging can be enabled by setting the corresponding checkbox in the preferences tab, or by enabling the global extended logging in Tiny Tiny RSS.
+Extended logging can be enabled by setting the corresponding checkbox in the preferences tab, or by enabling global extended logging in Tiny Tiny RSS.
 Regardless of these two settings, errors are always logged.
 The log entries go into what you have defined in LOG_DESTINATION in Tiny Tiny RSSes config.php.
 
-If you enable extended (local) logging, the activity of the plugin will be reported with great detail. In particular, if you see no output at all, none of your objects in the configuration matched any of your subscribed feeds.
+If you enable extended (local) logging, the activity of the plugin will be reported in great detail. In particular, if you see no output at all, none of your objects in the configuration matched any of your subscribed feeds.
 

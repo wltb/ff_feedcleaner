@@ -19,8 +19,12 @@ function apply_regex($feed_data, $config, $debug = false)
 }
 
 function enc_utf8($feed_data, $config, $debug = false) {
-	$decl_regex = '/^(<\?xml[\t\n\r ]+version[\t\n\r ]*=[\t\n\r ]*["\']1\.[0-9]+["\'][\t\n\r ]+encoding[\t\n\r ]*=[\t\n\r ]*["\'])([A-Za-z][A-Za-z0-9._-]*)(["\'](?:[\t\n\r ]+standalone[\t\n\r ]*=[\t\n\r ]*["\'](?:yes|no)["\'])?[\t\n\r ]*\?>)/';
-	if (preg_match($decl_regex, $feed_data, $matches) === 1 && $matches[2] != 'UTF-8') {
+	$decl_regex = '/^(<\?xml
+						[\t\n\r ]+version[\t\n\r ]*=[\t\n\r ]*["\']1\.[0-9]+["\']
+						[\t\n\r ]+encoding[\t\n\r ]*=[\t\n\r ]*["\'])([A-Za-z][A-Za-z0-9._-]*)(["\']
+						(?:[\t\n\r ]+standalone[\t\n\r ]*=[\t\n\r ]*["\'](?:yes|no)["\'])?
+					[\t\n\r ]*\?>)/x';
+	if (preg_match($decl_regex, $feed_data, $matches) === 1 && strtoupper($matches[2]) != 'UTF-8') {
 		$data = iconv($matches[2], 'UTF-8//IGNORE', $feed_data);
 		
 		if($data !== false)
@@ -82,15 +86,18 @@ function apply_xpath_regex($feed_data, $config, $debug = false)
 		
 	$counter = 0;
 	foreach($node_list as $node) {
-		if( $node->childNodes->length != 1) {
-			user_error('For ' . json_encode($config) . ': Node "' . $node->getNodePath() . '" has more then one (or no) child. Modifying the text content of such nodes is not supported at the moment', E_USER_WARNING);
-			continue;
+		if( $node->nodeType == XML_TEXT_NODE) {
+			$text_mod = preg_replace($pat, $rep, $node->textContent, -1, $count);
+			if($text_mod)
+				$node->nodeValue = $text_mod;
 		}
-		foreach($node->childNodes as $child) {
-			if($child->nodeType == XML_TEXT_NODE) {
-				$text_mod = preg_replace($pat, $rep, $child->textContent, -1, $count);
-				if($text_mod)
-					$child->nodeValue = $text_mod;
+		else {
+			foreach($node->childNodes as $child) {
+				if($child->nodeType == XML_TEXT_NODE) {
+					$text_mod = preg_replace($pat, $rep, $child->textContent, -1, $count);
+					if($text_mod)
+						$child->nodeValue = $text_mod;
+				}
 			}
 		}
 		$counter += $count;
