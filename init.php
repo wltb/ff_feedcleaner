@@ -171,7 +171,7 @@ class ff_FeedCleaner extends Plugin
 		$debug = $debug_conf || $this->host->get_debug();
 
 		if (!is_array($data)) {
-			user_error('No or malformed configuration stored', E_USER_ERROR);
+			user_error('No or malformed configuration stored', E_USER_WARNING);
 			return $feed_data;
 		}
 		
@@ -180,7 +180,10 @@ class ff_FeedCleaner extends Plugin
 			
 			//Legacy support
 			if(!is_numeric($index) && !array_key_exists('URL_re', $config))
+			{
 				$config['URL_re'] = $index;
+				user_error('Please convert your configuration. Check https://github.com/wltb/ff_feedcleaner/blob/master/conf_conv.md for details.', E_USER_WARNING);
+			}
 				
 			if(array_key_exists('URL', $config))
 				$test = (strpos($fetch_url, $config['URL']) !== false);

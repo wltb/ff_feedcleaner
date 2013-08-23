@@ -19,6 +19,9 @@ $ cd /var/www/ttrss/plugins
 $ git clone https://github.com/wltb/ff_feedcleaner
 ```
 
+Alternatively, you can download the zip archive and unzip it into the *plugins* subdirectory of your Tiny Tiny RSS installation.
+Note that the directory containing *init.php* **must** be named *ff_feedcleaner*, otherwise Tiny Tiny RSS won't load the plugin, so you may have to rename it after the unzipping.
+
 After that, the plugin must be enabled in the preferences of Tiny Tiny RSS.
 
 ## Configuration
@@ -31,7 +34,7 @@ An example configuration looks like this:
 ```json
 [
 	{
-		"URL": "http://www.iswintercoming.com/feed.php",
+		"URL_re": "#http://(prospector\\.freeforums\\.org|www\\.iswintercoming\\.com)/feed\\.php#",
 		"type": "regex",
 		"pattern": "/sid=[0-9a-f]{32}/",
 		"replacement": ""
@@ -61,10 +64,12 @@ The *URL* and *URL_re* values are used to select the feeds on which the associat
 To match, the *URL* value must be a substring of the feed URL.
 The *URL_re* value must be a regular expression in the [pcre module style](http://www.php.net/manual/en/book.pcre.php) which is matched against the feed URL with the [preg_match function](http://www.php.net/manual/en/function.preg-match.php).
 
-If an object contains a *URL* and a *URL_re* key, the *URL_re* key is ignored. Generally a *URL_re* key should only be used in specific cases.
+If an object contains both a *URL* and a *URL_re* key, the *URL_re* key is ignored. Generally a *URL_re* key should only be used in specific cases.
+In the example above, the *URL_re* key is used so that the pattern can be applied to more then one domain.
 
 It should be noted that the configuration is always UTF-8 encoded.
 This may cause problems if the regular expressions contain non-ASCII characters, and the feed encoding is not UTF-8.
+You may then want to convert the feed encoding beforehand with [type uft-8](https://github.com/wltb/ff_feedcleaner#type-utf-8).
 
 ###Type *regex*
 For this type, two additional keys must be specified: *pattern* and *replacement*.
@@ -83,7 +88,7 @@ With this type, some subtleties have to be regarded.
 ###Examples
 We explain what the entries in the given example configuration do.
 
-In the entry with the URL value *http://www.iswintercoming.com/feed.php*, for any feed whose URL contains *http://www.iswintercoming.com/feed.php*, expressions like *sid=a7595fe6a719361152bb96f8a0bd48b5* (a *sid=* followed by 32 hexadecimal digits) are deleted from the feed data.
+In the entry with the URL_re key, for any feed whose URL contains *http://www.iswintercoming.com/feed.php* or *http://prospector.freeforums.org/feed.php*, expressions like *sid=a7595fe6a719361152bb96f8a0bd48b5* (a *sid=* followed by 32 hexadecimal digits) are removed from the feed data.
 
 The other two entries are useful in conjunction with [af_feedmod](https://github.com/mbirth/ttrss_plugin-af_feedmod).
 They amend the article links such that they point to a web page with the full article content, so that it can be fetched instead of just a segment.
@@ -113,9 +118,9 @@ In the NY Times objects, we also can see the different ways of inserting a "&amp
 This type converts the feed data encoding to UTF-8.
 
 ##Extended Logging
-Extended logging can be enabled by setting the corresponding checkbox in the preferences tab, or by enabling global extended logging in Tiny Tiny RSS.
+Extended logging is enabled by setting the corresponding checkbox in the preferences tab, or by enabling global extended logging in Tiny Tiny RSS.
 Regardless of these two settings, errors are always logged.
 The log entries go into what you have defined in LOG_DESTINATION in Tiny Tiny RSSes config.php.
 
-If you enable extended (local) logging, the activity of the plugin will be reported in great detail. In particular, if you see no output at all, none of your objects in the configuration matched any of your subscribed feeds.
+If you enable extended logging, the activity of the plugin will be reported in great detail. In particular, if you see no output at all, none of your objects in the configuration matched any of your subscribed feeds.
 
