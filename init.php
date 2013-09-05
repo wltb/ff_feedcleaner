@@ -46,35 +46,9 @@ function enc_utf8($feed_data, $config, $debug = false) {
 
 function apply_xpath_regex($feed_data, $config, $debug = false)
 {
-	libxml_use_internal_errors(true);
-	libxml_clear_errors();
 	$doc = new DOMDocument();
 	$doc->loadXML($feed_data);
-	$error = libxml_get_last_error();
 
-	// libxml compiled without iconv?
-	if ($error && $error->code == 32) {
-		if($debug)
-			user_error('Trying to convert encoding of feed data to UTF-8', E_USER_NOTICE);
-		$feed_data = enc_utf8($feed_data, $config, $debug);
-		
-		$doc = new DOMDocument();
-		$doc->loadXML($feed_data);
-
-		$error = libxml_get_last_error();
-	}
-	
-	if($error) {
-		user_error('For ' . json_encode($config) . ': Feed couldn\'t be parsed', E_USER_WARNING);
-		foreach(libxml_get_errors() as $error) {		
-			user_error(sprintf("LibXML error %s at line %d (column %d): %s",
-				$error->code, $error->line, $error->column,
-				$error->message),
-				E_USER_WARNING);
-		}	
-		return $feed_data;
-	}
-	
 	$xpath = new DOMXPath($doc);
 	$node_list = $xpath->query($config['xpath']);
 	
