@@ -2,87 +2,6 @@
 
 include 'converter.php';
 
-function apply_regex($feed_data, $config, $debug = false)
-{
-	$pat = $config["pattern"];
-	$rep = $config["replacement"];
-	
-	$feed_data_mod = preg_replace($pat, $rep, $feed_data, -1, $count);
-	
-	if($debug)
-		user_error('Applied (pattern "' . $pat . '", replacement "' . $rep . '") ' . $count . ' times', E_USER_NOTICE);
-	
-	if($feed_data_mod)
-		$feed_data = $feed_data_mod;
-
-	return $feed_data;
-}
-
-function enc_utf8($feed_data, $config, $debug = false) {
-	$decl_regex = '/^(<\?xml
-						[\t\n\r ]+version[\t\n\r ]*=[\t\n\r ]*["\']1\.[0-9]+["\']
-						[\t\n\r ]+encoding[\t\n\r ]*=[\t\n\r ]*["\'])([A-Za-z][A-Za-z0-9._-]*)(["\']
-						(?:[\t\n\r ]+standalone[\t\n\r ]*=[\t\n\r ]*["\'](?:yes|no)["\'])?
-					[\t\n\r ]*\?>)/x';
-	if (preg_match($decl_regex, $feed_data, $matches) === 1 && strtoupper($matches[2]) != 'UTF-8') {
-		$data = iconv($matches[2], 'UTF-8//IGNORE', $feed_data);
-		
-		if($data !== false)
-		{
-			$feed_data = preg_replace($decl_regex, $matches[1] . "UTF-8" . $matches[3], $data);
-			if($debug)
-				user_error('Encoding conversion to UTF-8 was successful', E_USER_NOTICE);
-		}
-		else
-			user_error('For ' . json_encode($config) . ": Couldn't convert the encoding", E_USER_WARNING);
-	}
-	else {
-		if($debug)
-			user_error('No encoding declared or encoding is UTF-8 already', E_USER_NOTICE);
-	}
-
-	return $feed_data;
-}
-
-function apply_xpath_regex($feed_data, $config, $debug = false)
-{
-	$doc = new DOMDocument();
-	$doc->loadXML($feed_data);
-
-	$xpath = new DOMXPath($doc);
-	$node_list = $xpath->query($config['xpath']);
-	
-	$pat = $config["pattern"];
-	$rep = $config["replacement"];
-	
-	if($debug)
-		user_error('Found ' . $node_list->length . ' nodes with XPath "' . $config['xpath'] . '"', E_USER_NOTICE);
-		
-	$counter = 0;
-	foreach($node_list as $node) {
-		if( $node->nodeType == XML_TEXT_NODE) {
-			$text_mod = preg_replace($pat, $rep, $node->textContent, -1, $count);
-			if($text_mod)
-				$node->nodeValue = $text_mod;
-		}
-		else {
-			foreach($node->childNodes as $child) {
-				if($child->nodeType == XML_TEXT_NODE) {
-					$text_mod = preg_replace($pat, $rep, $child->textContent, -1, $count);
-					if($text_mod)
-						$child->nodeValue = $text_mod;
-				}
-			}
-		}
-		$counter += $count;
-	}
-	
-	if($debug)
-		user_error('Applied (pattern "' . $pat . '", replacement "' . $rep . '") ' . $counter . ' times', E_USER_NOTICE);
-	
-	return $doc->saveXML();
-}
-
 class ff_FeedCleaner extends Plugin
 {
 	private $host;
@@ -122,7 +41,7 @@ class ff_FeedCleaner extends Plugin
 		$this->host = $host;
 
 		if (version_compare(VERSION_STATIC, '1.8', '<')){
-			user_error('Hooks not registered. Needs at least version 1.8', E_USER_ERROR);
+			user_error('Hooks not registered. Needs at least version 1.8', E_USER_WARNING);
 			return;
 		}
 
@@ -171,13 +90,13 @@ class ff_FeedCleaner extends Plugin
 					user_error('Modifying ' . $fetch_url . ' with ' . json_encode($config), E_USER_NOTICE);
 				switch (strtolower($config["type"])) {
 					case "regex":
-						$feed_data = apply_regex($feed_data, $config, $debug);
+						$feed_data = $this->apply_regex($feed_data, $config, $debug);
 						break;
 					case "xpath_regex":
-						$feed_data = apply_xpath_regex($feed_data, $config, $debug);
+						$feed_data = $this->apply_xpath_regex($feed_data, $config, $debug);
 						break;
 					case "utf-8":
-						$feed_data = enc_utf8($feed_data, $config, $debug);
+						$feed_data = $this->enc_utf8($feed_data, $config, $debug);
 						break;
 					default:
 						continue;
@@ -193,6 +112,88 @@ class ff_FeedCleaner extends Plugin
 		return false;
 	}
 	*/
+	
+	//helper functions
+	function enc_utf8($feed_data, $config, $debug = false) {
+		$decl_regex = '/^(<\?xml
+							[\t\n\r ]+version[\t\n\r ]*=[\t\n\r ]*["\']1\.[0-9]+["\']
+							[\t\n\r ]+encoding[\t\n\r ]*=[\t\n\r ]*["\'])([A-Za-z][A-Za-z0-9._-]*)(["\']
+							(?:[\t\n\r ]+standalone[\t\n\r ]*=[\t\n\r ]*["\'](?:yes|no)["\'])?
+						[\t\n\r ]*\?>)/x';
+		if (preg_match($decl_regex, $feed_data, $matches) === 1 && strtoupper($matches[2]) != 'UTF-8') {
+			$data = iconv($matches[2], 'UTF-8//IGNORE', $feed_data);
+			
+			if($data !== false)
+			{
+				$feed_data = preg_replace($decl_regex, $matches[1] . "UTF-8" . $matches[3], $data);
+				if($debug)
+					user_error('Encoding conversion to UTF-8 was successful', E_USER_NOTICE);
+			}
+			else
+				user_error('For ' . json_encode($config) . ": Couldn't convert the encoding", E_USER_WARNING);
+		}
+		else {
+			if($debug)
+				user_error('No encoding declared or encoding is UTF-8 already', E_USER_NOTICE);
+		}
+	
+		return $feed_data;
+	}
+	
+	function apply_regex($feed_data, $config, $debug = false)
+	{
+		$pat = $config["pattern"];
+		$rep = $config["replacement"];
+		
+		$feed_data_mod = preg_replace($pat, $rep, $feed_data, -1, $count);
+		
+		if($debug)
+			user_error('Applied (pattern "' . $pat . '", replacement "' . $rep . '") ' . $count . ' times', E_USER_NOTICE);
+		
+		if($feed_data_mod)
+			$feed_data = $feed_data_mod;
+	
+		return $feed_data;
+	}
+	
+	function apply_xpath_regex($feed_data, $config, $debug = false)
+	{
+		$doc = new DOMDocument();
+		$doc->loadXML($feed_data);
+	
+		$xpath = new DOMXPath($doc);
+		$node_list = $xpath->query($config['xpath']);
+		
+		$pat = $config["pattern"];
+		$rep = $config["replacement"];
+		
+		if($debug)
+			user_error('Found ' . $node_list->length . ' nodes with XPath "' . $config['xpath'] . '"', E_USER_NOTICE);
+			
+		$counter = 0;
+		foreach($node_list as $node) {
+			if( $node->nodeType == XML_TEXT_NODE) {
+				$text_mod = preg_replace($pat, $rep, $node->textContent, -1, $count);
+				if($text_mod)
+					$node->nodeValue = $text_mod;
+			}
+			else {
+				foreach($node->childNodes as $child) {
+					if($child->nodeType == XML_TEXT_NODE) {
+						$text_mod = preg_replace($pat, $rep, $child->textContent, -1, $count);
+						if($text_mod)
+							$child->nodeValue = $text_mod;
+					}
+				}
+			}
+			$counter += $count;
+		}
+		
+		if($debug)
+			user_error('Applied (pattern "' . $pat . '", replacement "' . $rep . '") ' . $counter . ' times', E_USER_NOTICE);
+		
+		return $doc->saveXML();
+	}
 	
 	//gui hook stuff
 	function hook_prefs_tabs($args)
