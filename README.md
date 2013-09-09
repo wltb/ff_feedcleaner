@@ -26,7 +26,13 @@ After that, the plugin must be enabled in the preferences of Tiny Tiny RSS.
 
 ## Configuration
 In the preferences, you'll find a new tab called *FeedCleaner* which contains one large text field which is used to enter/modify the configuration data,
-and a checkbox to turn extended logging on and off.
+and two checkboxes to turn
+
+* [extended logging](https://github.com/wltb/ff_feedcleaner#extended-logging)
+* [automatic feed correction](https://github.com/wltb/ff_feedcleaner#automatic-feed-correction)
+
+on and off.
+
 Basically, the configuration data consists of an unnamed [JSON](http://json.org/) array that contains some unnamed JSON objects. Use the **Save** button to store it.
 
 An example configuration looks like this:
@@ -123,4 +129,12 @@ Regardless of these two settings, errors are always logged.
 The log entries go into what you have defined in LOG_DESTINATION in Tiny Tiny RSSes config.php.
 
 If you enable extended logging, the activity of the plugin will be reported in great detail. In particular, if you see no output at all, none of your objects in the configuration matched any of your subscribed feeds.
+
+##Automatic feed correction
+If enabled, this option tries to automatically correct faulty feed data.
+Currently, it does this by trying to load the feed into a [DOMDocument](http://www.php.net/manual/en/book.dom.php),
+and applies encoding conversion if error 32 and the removal of dangling bytes and invalid Unicode characters if error 9 is detected.
+Any remaining fatal errors will appear in Tiny Tiny RSSes log.
+
+It is recommended to enable this option if a type like *xpath_regex* is in use.
 

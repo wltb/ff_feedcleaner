@@ -25,7 +25,7 @@ class ff_FeedCleaner extends Plugin
 	function about()
 	{
 		return array(
-			0.8, // version
+			0.9, // version
 			'Applies regular expressions to a feed', // description
 			'feader', // author
 			false, // is_system
@@ -76,12 +76,9 @@ class ff_FeedCleaner extends Plugin
 		foreach($data as $index => $config) {
 			$test = false;
 			
-			//Legacy support
-			if(!is_numeric($index) && !array_key_exists('URL_re', $config))
-			{
-				$config['URL_re'] = $index;
+			//Legacy reminder
+			if(!is_numeric($index) && !array_key_exists('URL_re', $config) && !array_key_exists('URL', $config))
 				user_error('Please convert your configuration. Check https://github.com/wltb/ff_feedcleaner/blob/master/conf_conv.md for details.', E_USER_WARNING);
-			}
 				
 			if(array_key_exists('URL', $config))
 				$test = (strpos($fetch_url, $config['URL']) !== false);
