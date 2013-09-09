@@ -64,6 +64,10 @@ class ff_FeedCleaner extends Plugin
 		$debug_conf = sql_bool_to_bool($this->host->get($this, 'debug', bool_to_sql_bool(FALSE)));
 		$this->debug = $debug_conf || $this->host->get_debug();
 
+		$auto_correct = sql_bool_to_bool($this->host->get($this, 'auto_correct', bool_to_sql_bool(FALSE)));
+		if($auto_correct)
+			$feed_data = $this->auto_correct($feed_data, $fetch_url);
+		
 		if (!is_array($data)) {
 			user_error('No or malformed configuration stored', E_USER_WARNING);
 			return $feed_data;
@@ -115,12 +119,71 @@ class ff_FeedCleaner extends Plugin
 	*/
 
 	//helper functions
+	function auto_correct($feed_data, $fetch_url) {
+		libxml_use_internal_errors(true);
+		libxml_clear_errors();
+		$doc = new DOMDocument();
+		@$doc->loadXML($feed_data);
+		$error = libxml_get_last_error();
+
+		// libxml compiled without iconv?
+		if ($error && $error->code == 32) {
+			if($this->debug)
+				user_error("Trying to convert encoding of feed '$fetch_url' to UTF-8", E_USER_NOTICE);
+			$feed_data = enc_utf8($feed_data, array('URL' => $fetch_url));
+			
+			libxml_clear_errors();
+			$doc = new DOMDocument();
+			@$doc->loadXML($feed_data);
+
+			$error = libxml_get_last_error();
+		}
+		
+		if($error) {
+			foreach(libxml_get_errors() as $err) {
+				if ($err && $err->code == 9) {
+					$data = iconv('UTF-8', 'UTF-8//IGNORE', $feed_data);
+					$data = preg_replace('/[^\x{0009}\x{000a}\x{000d}\x{0020}-\x{D7FF}\x{E000}-\x{FFFD}]+/u', ' ', $data, -1, $count);
+
+					if($data) {
+						$feed_data = $data;
+						
+						if($this->debug)
+							user_error("Replaced $count invalid character(s) for '$fetch_url'", E_USER_NOTICE);
+						libxml_clear_errors();
+
+						$doc = new DOMDocument();
+						@$doc->loadXML($feed_data);
+
+						$error = libxml_get_last_error();
+					}
+					else
+						user_error("Feed '$fetch_url': Couldn't clean faulty unicode entity", E_USER_WARNING);
+					break;
+				}
+			}	
+		}
+		
+		if($error) {
+			foreach(libxml_get_errors() as $error) {
+				if($error->level == LIBXML_ERR_FATAL) {
+					user_error(sprintf("For feed '$fetch_url': LibXML error %s at line %d (column %d): %s",
+						$error->code, $error->line, $error->column, $error->message),
+					E_USER_WARNING);
+				}
+			}	
+		}
+		
+		return $feed_data;
+	}
+	
 	function enc_utf8($feed_data, $config) {
-		$decl_regex = '/^(<\?xml
-							[\t\n\r ]+version[\t\n\r ]*=[\t\n\r ]*["\']1\.[0-9]+["\']
-							[\t\n\r ]+encoding[\t\n\r ]*=[\t\n\r ]*["\'])([A-Za-z][A-Za-z0-9._-]*)(["\']
-							(?:[\t\n\r ]+standalone[\t\n\r ]*=[\t\n\r ]*["\'](?:yes|no)["\'])?
-						[\t\n\r ]*\?>)/x';
+		$decl_regex =
+			'/^(<\?xml
+				[\t\n\r ]+version[\t\n\r ]*=[\t\n\r ]*["\']1\.[0-9]+["\']
+				[\t\n\r ]+encoding[\t\n\r ]*=[\t\n\r ]*["\'])([A-Za-z][A-Za-z0-9._-]*)(["\']
+				(?:[\t\n\r ]+standalone[\t\n\r ]*=[\t\n\r ]*["\'](?:yes|no)["\'])?
+			[\t\n\r ]*\?>)/x';
 		if (preg_match($decl_regex, $feed_data, $matches) === 1 && strtoupper($matches[2]) != 'UTF-8') {
 			$data = iconv($matches[2], 'UTF-8//IGNORE', $feed_data);
 			
@@ -210,13 +273,20 @@ class ff_FeedCleaner extends Plugin
 		$this->convert_config($pluginhost);
 		
 		$json_conf = $pluginhost->get($this, 'json_conf');
+		
 		$debug = sql_bool_to_bool($this->host->get($this, "debug", bool_to_sql_bool(FALSE)));
 		if ($debug) {
 			$debugChecked = "checked=\"1\"";
 		} else {
 			$debugChecked = "";
 		}
-
+		$auto_correct = sql_bool_to_bool($this->host->get($this, "auto_correct", bool_to_sql_bool(FALSE)));
+		if ($auto_correct) {
+			$auto_correctChecked = "checked=\"1\"";
+		} else {
+			$auto_correctChecked = "";
+		}
+		
 		print '<form dojoType="dijit.form.Form" accept-charset="UTF-8" style="overflow:auto;">';
 
 		print "<script type=\"dojo/method\" event=\"onSubmit\" args=\"evt\">
@@ -244,6 +314,8 @@ class ff_FeedCleaner extends Plugin
 		print "<table width='30%' style=\"border:3px ridge grey;\">";
 		print "<tr><td width=\"95%\"><label for=\"debug_id\">".__("Enable extended logging")."</label></td>";
 		print "<td class=\"prefValue\"><input dojoType=\"dijit.form.CheckBox\" type=\"checkbox\" name=\"debug\" id=\"debug_id\" $debugChecked></td></tr>";
+		print "<tr><td width=\"95%\"><label for=\"auto_correct_id\">".__("Enable automatic correction")."</label></td>";
+		print "<td class=\"prefValue\"><input dojoType=\"dijit.form.CheckBox\" type=\"checkbox\" name=\"auto_correct\" id=\"auto_correct_id\" $auto_correctChecked></td></tr>";
 		print "</table>";
 
 		print "<p><button dojoType=\"dijit.form.Button\" type=\"submit\">".__("Save")."</button>";
@@ -262,7 +334,8 @@ class ff_FeedCleaner extends Plugin
 		
 		$this->host->set($this, 'json_conf', $json_conf);
 		$this->host->set($this, 'debug', checkbox_to_sql_bool($_POST["debug"]));
-
+		$this->host->set($this, 'auto_correct', checkbox_to_sql_bool($_POST["auto_correct"]));
+		
 		echo __("Configuration saved.");
 	}
 
