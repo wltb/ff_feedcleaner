@@ -5,6 +5,7 @@ include 'converter.php';
 class ff_FeedCleaner extends Plugin
 {
 	private $host;
+	private $debug;
 	private $CONVERT = false;
 
 	function convert_config($host)
@@ -61,7 +62,7 @@ class ff_FeedCleaner extends Plugin
 		
 		$data = json_decode($json_conf, true);
 		$debug_conf = sql_bool_to_bool($this->host->get($this, 'debug', bool_to_sql_bool(FALSE)));
-		$debug = $debug_conf || $this->host->get_debug();
+		$this->debug = $debug_conf || $this->host->get_debug();
 
 		if (!is_array($data)) {
 			user_error('No or malformed configuration stored', E_USER_WARNING);
@@ -86,17 +87,17 @@ class ff_FeedCleaner extends Plugin
 				user_error('For ' . json_encode($config) . ': Neither URL nor URL_re key is present', E_USER_WARNING);
 			
 			if( $test ){
-				if($debug)
+				if($this->debug)
 					user_error('Modifying ' . $fetch_url . ' with ' . json_encode($config), E_USER_NOTICE);
 				switch (strtolower($config["type"])) {
 					case "regex":
-						$feed_data = $this->apply_regex($feed_data, $config, $debug);
+						$feed_data = $this->apply_regex($feed_data, $config);
 						break;
 					case "xpath_regex":
-						$feed_data = $this->apply_xpath_regex($feed_data, $config, $debug);
+						$feed_data = $this->apply_xpath_regex($feed_data, $config);
 						break;
 					case "utf-8":
-						$feed_data = $this->enc_utf8($feed_data, $config, $debug);
+						$feed_data = $this->enc_utf8($feed_data, $config);
 						break;
 					default:
 						continue;
@@ -112,9 +113,9 @@ class ff_FeedCleaner extends Plugin
 		return false;
 	}
 	*/
-	
+
 	//helper functions
-	function enc_utf8($feed_data, $config, $debug = false) {
+	function enc_utf8($feed_data, $config) {
 		$decl_regex = '/^(<\?xml
 							[\t\n\r ]+version[\t\n\r ]*=[\t\n\r ]*["\']1\.[0-9]+["\']
 							[\t\n\r ]+encoding[\t\n\r ]*=[\t\n\r ]*["\'])([A-Za-z][A-Za-z0-9._-]*)(["\']
@@ -126,28 +127,28 @@ class ff_FeedCleaner extends Plugin
 			if($data !== false)
 			{
 				$feed_data = preg_replace($decl_regex, $matches[1] . "UTF-8" . $matches[3], $data);
-				if($debug)
+				if($this->debug)
 					user_error('Encoding conversion to UTF-8 was successful', E_USER_NOTICE);
 			}
 			else
 				user_error('For ' . json_encode($config) . ": Couldn't convert the encoding", E_USER_WARNING);
 		}
 		else {
-			if($debug)
+			if($this->debug)
 				user_error('No encoding declared or encoding is UTF-8 already', E_USER_NOTICE);
 		}
 	
 		return $feed_data;
 	}
 	
-	function apply_regex($feed_data, $config, $debug = false)
+	function apply_regex($feed_data, $config)
 	{
 		$pat = $config["pattern"];
 		$rep = $config["replacement"];
 		
 		$feed_data_mod = preg_replace($pat, $rep, $feed_data, -1, $count);
 		
-		if($debug)
+		if($this->debug)
 			user_error('Applied (pattern "' . $pat . '", replacement "' . $rep . '") ' . $count . ' times', E_USER_NOTICE);
 		
 		if($feed_data_mod)
@@ -156,7 +157,7 @@ class ff_FeedCleaner extends Plugin
 		return $feed_data;
 	}
 	
-	function apply_xpath_regex($feed_data, $config, $debug = false)
+	function apply_xpath_regex($feed_data, $config)
 	{
 		$doc = new DOMDocument();
 		$doc->loadXML($feed_data);
@@ -167,7 +168,7 @@ class ff_FeedCleaner extends Plugin
 		$pat = $config["pattern"];
 		$rep = $config["replacement"];
 		
-		if($debug)
+		if($this->debug)
 			user_error('Found ' . $node_list->length . ' nodes with XPath "' . $config['xpath'] . '"', E_USER_NOTICE);
 			
 		$counter = 0;
@@ -189,7 +190,7 @@ class ff_FeedCleaner extends Plugin
 			$counter += $count;
 		}
 		
-		if($debug)
+		if($this->debug)
 			user_error('Applied (pattern "' . $pat . '", replacement "' . $rep . '") ' . $counter . ' times', E_USER_NOTICE);
 		
 		return $doc->saveXML();
