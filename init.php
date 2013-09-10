@@ -117,6 +117,8 @@ class ff_FeedCleaner extends Plugin
 
 	//helper functions
 	function auto_correct($feed_data, $fetch_url) {
+		$modified = false;
+
 		libxml_use_internal_errors(true);
 		libxml_clear_errors();
 		$doc = new DOMDocument();
@@ -128,6 +130,7 @@ class ff_FeedCleaner extends Plugin
 			if($this->debug)
 				user_error("Trying to convert encoding of feed '$fetch_url' to UTF-8", E_USER_NOTICE);
 			$feed_data = enc_utf8($feed_data, array('URL' => $fetch_url));
+			$modified = true;
 			
 			libxml_clear_errors();
 			$doc = new DOMDocument();
@@ -143,6 +146,7 @@ class ff_FeedCleaner extends Plugin
 					$data = preg_replace('/[^\x{0009}\x{000a}\x{000d}\x{0020}-\x{D7FF}\x{E000}-\x{FFFD}]+/u', ' ', $data, -1, $count);
 
 					if($data) {
+						$modified = true;
 						$feed_data = $data;
 						
 						if($this->debug)
@@ -161,6 +165,9 @@ class ff_FeedCleaner extends Plugin
 			}	
 		}
 		
+		if($modified)
+			user_error("Tried to auto correct feed '$fetch_url'", E_USER_NOTICE);
+
 		if($error) {
 			foreach(libxml_get_errors() as $error) {
 				if($error->level == LIBXML_ERR_FATAL) {

@@ -136,5 +136,7 @@ Currently, it does this by trying to load the feed into a [DOMDocument](http://w
 and applies encoding conversion if error 32 and the removal of dangling bytes and invalid Unicode characters if error 9 is detected.
 Any remaining fatal errors will appear in Tiny Tiny RSSes log.
 
+If the feed is changed, this will be logged regardless if extended logging is enabled.
+
 It is recommended to enable this option if a type like *xpath_regex* is in use.
 
