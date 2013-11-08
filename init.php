@@ -143,7 +143,11 @@ class ff_FeedCleaner extends Plugin
 		if($error) {
 			foreach(libxml_get_errors() as $err) {
 				if ($err && $err->code == 9) {
-					$data = iconv('UTF-8', 'UTF-8//IGNORE', $feed_data);
+					$data = $this->enc_utf8($feed_data, array('URL' => $fetch_url, 'type' => 'auto-correct'));
+					
+					mb_substitute_character("none");
+					$data = mb_convert_encoding($data, 'UTF-8', 'UTF-8');
+
 					$data = preg_replace('/[^\x{0009}\x{000a}\x{000d}\x{0020}-\x{D7FF}\x{E000}-\x{FFFD}]+/u', ' ', $data, -1, $count);
 
 					if($data) {
@@ -190,8 +194,8 @@ class ff_FeedCleaner extends Plugin
 				(?:[\t\n\r ]+standalone[\t\n\r ]*=[\t\n\r ]*["\'](?:yes|no)["\'])?
 			[\t\n\r ]*\?>)/x';
 		if (preg_match($decl_regex, $feed_data, $matches) === 1 && strtoupper($matches[2]) != 'UTF-8') {
-			$data = iconv($matches[2], 'UTF-8//IGNORE', $feed_data);
-			
+			mb_substitute_character("none");
+			$data = mb_convert_encoding($feed_data, 'UTF-8', $matches[2]);
 			if($data !== false)
 			{
 				$feed_data = preg_replace($decl_regex, $matches[1] . "UTF-8" . $matches[3], $data);
