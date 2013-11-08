@@ -129,7 +129,8 @@ class ff_FeedCleaner extends Plugin
 		if ($error && $error->code == 32) {
 			if($this->debug)
 				user_error("Trying to convert encoding of feed '$fetch_url' to UTF-8", E_USER_NOTICE);
-			$feed_data = enc_utf8($feed_data, array('URL' => $fetch_url));
+			$feed_data = $this->enc_utf8($feed_data, array('URL' => $fetch_url, 'type' => 'auto-correct'));
+
 			$modified = true;
 			
 			libxml_clear_errors();
@@ -175,7 +176,7 @@ class ff_FeedCleaner extends Plugin
 						$error->code, $error->line, $error->column, $error->message),
 					E_USER_WARNING);
 				}
-			}	
+			}
 		}
 		
 		return $feed_data;
