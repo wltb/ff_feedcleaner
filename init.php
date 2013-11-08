@@ -166,10 +166,10 @@ class ff_FeedCleaner extends Plugin
 			}	
 		}
 		
-		if($modified)
+		if($modified && $this->debug)
 			user_error("Tried to auto correct feed '$fetch_url'", E_USER_NOTICE);
 
-		if($error) {
+		if($error && $this->debug) {
 			foreach(libxml_get_errors() as $error) {
 				if($error->level == LIBXML_ERR_FATAL) {
 					user_error(sprintf("For feed '$fetch_url': LibXML error %s at line %d (column %d): %s",

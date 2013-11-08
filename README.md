@@ -134,9 +134,8 @@ If you enable extended logging, the activity of the plugin will be reported in g
 If enabled, this option tries to automatically correct faulty feed data.
 Currently, it does this by trying to load the feed into a [DOMDocument](http://www.php.net/manual/en/book.dom.php),
 and applies encoding conversion if error 32 and the removal of dangling bytes and invalid Unicode characters if error 9 is detected.
-Any remaining fatal errors will appear in Tiny Tiny RSSes log.
 
-If the feed is changed, this will be logged regardless if extended logging is enabled.
+Indication that the feed was changed, and any remaining fatal errors will appear in Tiny Tiny RSSes log, but only if extended logging is enabled.
 
 It is recommended to enable this option if a type like *xpath_regex* is in use.
 
