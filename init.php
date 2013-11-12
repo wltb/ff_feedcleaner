@@ -1,26 +1,9 @@
 <?php
 
-include 'converter.php';
-
 class ff_FeedCleaner extends Plugin
 {
 	private $host;
 	private $debug;
-	private $CONVERT = false;
-
-	function convert_config($host)
-	{
-		if($this->CONVERT === true)
-		{
-			$json_conf = $host->get($this, 'json_conf');
-			$json_conf = convert_format($json_conf);
-			if (!is_null(json_decode($json_conf))) {
-				$host->set($this, 'json_conf', $json_conf);
-			}
-			else
-				user_error("Couldn't convert the configuration", E_USER_ERROR);
-		}
-	}
 
 	function about()
 	{
@@ -57,7 +40,6 @@ class ff_FeedCleaner extends Plugin
 	//implement fetch hooks
 	function hook_feed_fetched($feed_data, $fetch_url, $owner_uid, $feed_id)
 	{
-		$this->convert_config($this->host);
 		$json_conf = $this->host->get($this, 'json_conf');
 		
 		$data = json_decode($json_conf, true);
@@ -279,9 +261,7 @@ class ff_FeedCleaner extends Plugin
 
 	function index()
 	{
-		$pluginhost = PluginHost::getInstance();
-		$this->convert_config($pluginhost);
-		
+		$pluginhost = PluginHost::getInstance();		
 		$json_conf = $pluginhost->get($this, 'json_conf');
 		
 		$debug = sql_bool_to_bool($this->host->get($this, "debug", bool_to_sql_bool(FALSE)));

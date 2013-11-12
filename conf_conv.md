@@ -52,9 +52,5 @@ $json = <<<'EOT'
 EOT;
 ```
 
-in it and then execute the file on the command line. It should then output a configuration in the new fashion, which you can copy & paste to Tiny Tiny RSS and store it.
+in it and then execute the file on the command line. It should then output a configuration in the new fashion, which you can copy & paste to the configuration tab in Tiny Tiny RSS and store it afterwards.
 
-###In Tiny Tiny RSS
-The conversion can be automated by setting the variable *$CONVERT* at the beginning of the *ff_FeedCleaner* class in *init.php* to *true*. It will convert the configurations of all users.
-The *before* object is logged, but you are nonetheless encouraged to backup your configuration beforehand.
-Multiple conversions shouldn't change the converted configuration, but you may want to set *$CONVERT* back to *false* to reduce the clutter in your log.

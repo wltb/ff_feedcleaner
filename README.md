@@ -6,11 +6,6 @@ The plugin structure is very much inspired by the excellent [af_feedmod](https:/
 
 The Tiny Tiny RSS version must be 1.8 or later.
 
-##Configuration format changed
-With the release 0.8 of ff_FeedCleaner, the configuration format was changed,
-and as of 0.9, old style configurations won't work anymore.
-However, they can be easily converted using [conversion tools](https://github.com/wltb/ff_feedcleaner/blob/master/conf_conv.md#converting-the-configuration).
-
 ## Installation
 This should be done on the command line
 
