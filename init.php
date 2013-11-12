@@ -222,11 +222,11 @@ class ff_FeedCleaner extends Plugin
 		
 		$feed_data_mod = preg_replace($pat, $rep, $feed_data, -1, $count);
 		
-		if($this->debug)
-			user_error('Applied (pattern "' . $pat . '", replacement "' . $rep . '") ' . $count . ' times', E_USER_NOTICE);
-		
-		if($feed_data_mod)
+		if($feed_data_mod !== NULL) {
 			$feed_data = $feed_data_mod;
+			if($this->debug)
+				user_error('Applied (pattern "' . $pat . '", replacement "' . $rep . '") ' . $count . ' times', E_USER_NOTICE);
+		}
 	
 		return $feed_data;
 	}
@@ -244,24 +244,23 @@ class ff_FeedCleaner extends Plugin
 		
 		if($this->debug)
 			user_error('Found ' . $node_list->length . ' nodes with XPath "' . $config['xpath'] . '"', E_USER_NOTICE);
-			
-		$counter = 0;
-		foreach($node_list as $node) {
+		
+		$preg_rep_func = function($node) use ($pat, $rep, &$counter) {
 			if( $node->nodeType == XML_TEXT_NODE) {
 				$text_mod = preg_replace($pat, $rep, $node->textContent, -1, $count);
-				if($text_mod)
+				if($text_mod !== NULL) {
 					$node->nodeValue = $text_mod;
-			}
-			else {
-				foreach($node->childNodes as $child) {
-					if($child->nodeType == XML_TEXT_NODE) {
-						$text_mod = preg_replace($pat, $rep, $child->textContent, -1, $count);
-						if($text_mod)
-							$child->nodeValue = $text_mod;
-					}
+					$counter += $count;
 				}
 			}
-			$counter += $count;
+		};
+		$counter = 0;
+		foreach($node_list as $node) {
+			$preg_rep_func($node);
+			if($node->childNodes)
+				foreach($node->childNodes as $child) {
+					$preg_rep_func($child);
+				}
 		}
 		
 		if($this->debug)
