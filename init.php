@@ -215,13 +215,30 @@ class ff_FeedCleaner extends Plugin
 		
 		return $feed_data;
 	}
-	
+
 	function apply_xpath_regex($feed_data, $config)
 	{
 		$doc = new DOMDocument();
 		$doc->loadXML($feed_data);
-	
 		$xpath = new DOMXPath($doc);
+		
+		if(isset($config['namespaces']) && is_array($config['namespaces']))
+			foreach($config['namespaces'] as $prefix => $URI)
+				$xpath->registerNamespace($prefix, $URI);
+		else {
+			$NS = array(
+			"http://www.w3.org/2005/Atom",
+			"http://purl.org/rss/1.0/",
+			'http://purl.org/atom/ns#',
+			);
+			foreach($NS as $URI) {
+				if($xpath->document->isDefaultNamespace($URI)) {
+					$xpath->registerNamespace("NS", $URI);
+					break;
+				}
+			}
+		}
+
 		$node_list = $xpath->query($config['xpath']);
 		
 		$pat = $config["pattern"];
