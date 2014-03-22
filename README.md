@@ -2,6 +2,7 @@
 
 ## menu
 
+*   [Menu](#menu)
 *   [Introduction](#introduction)
 *   [Installation](#installation)
 *   [Configuration](#configuration)
