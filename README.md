@@ -1,8 +1,8 @@
 #ff_FeedCleaner
 
 ## menu
-    * [Introduction](<#Introduction>)
-    * [Installation](<#installation>)
+    * [Introduction](#Introduction)
+    * [Installation](#Installation)
 
 
 
