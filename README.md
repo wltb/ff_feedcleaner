@@ -1,5 +1,20 @@
 #ff_FeedCleaner
 
+## menu
+
+<!-- *   [Menu](#menu) -->
+*   [Introduction](#introduction)
+*   [Installation](#installation)
+*   [Configuration](#configuration)
+    *   [Type regex](#type-regex)
+    *   [Type xpath\_regex](#type-xpath\_regex)
+    *   [Examples](#examples)
+    *   [Type utf-8](#type-utf-8)
+*   [Extended Logging](#extended-logging)
+*   [Automatic feed correction](#automatic-feed-correction)
+
+## Introduction
+
 This is a plugin for [Tiny Tiny RSS](https://github.com/gothfox/Tiny-Tiny-RSS). It allows to modify the content of feeds before Tiny Tiny RSS parses them.
 Currently, the emphasis is on applying [regular expressions](http://www.php.net/manual/en/book.pcre.php) to the feed data.
 The plugin structure is very much inspired by the excellent [af_feedmod](https://github.com/mbirth/ttrss_plugin-af_feedmod) plugin.
