@@ -2,14 +2,14 @@
 
 ## menu
 
-*   [Menu](#menu)
+<!-- *   [Menu](#menu) -->
 *   [Introduction](#introduction)
 *   [Installation](#installation)
 *   [Configuration](#configuration)
-    *   [Type *regex*](#type-regex)
-    *   [Type *xpath_regex*](#type-xpath\_regex)
+    *   [Type regex](#type-regex)
+    *   [Type xpath\_regex](#type-xpath\_regex)
     *   [Examples](#examples)
-    *   [Type *utf-8*](#type-utf-8)
+    *   [Type utf-8](#type-utf-8)
 *   [Extended Logging](#extended-logging)
 *   [Automatic feed correction](#automatic-feed-correction)
 
