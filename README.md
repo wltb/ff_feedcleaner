@@ -1,5 +1,18 @@
 #ff_FeedCleaner
+## ToC
 
+*	[Introduction](#introduction)
+*	[Installation](#installation)
+*	[Configuration](#configuration)
+	*	[Type regex](#type-regex)
+	*	[Type xpath\_regex](#type-xpath\_regex)
+		*   [Namespaces](#namespaces)
+	*	[Examples](#examples)
+	*	[Type utf-8](#type-utf-8)
+*	[Extended Logging](#extended-logging)
+*	[Automatic feed correction](#automatic-feed-correction)
+
+## Introduction
 This is a plugin for [Tiny Tiny RSS](https://github.com/gothfox/Tiny-Tiny-RSS). It allows to modify the content of feeds before Tiny Tiny RSS parses them.
 Currently, the emphasis is on applying [regular expressions](http://www.php.net/manual/en/book.pcre.php) to the feed data.
 The plugin structure is very much inspired by the excellent [af_feedmod](https://github.com/mbirth/ttrss_plugin-af_feedmod) plugin.
@@ -84,7 +97,7 @@ The other keys that are needed are *pattern* and *replacement*. Their meaning is
 With this type, some subtleties have to be regarded.
 
 1. When the feed is loaded, all five [predefined entities](http://www.w3.org/TR/REC-xml/#sec-predefined-ent) are converted to their real values. When saving, only *&*, *<*, *>* (and in attributes, also *"*) are converted back to *&amp;amp;*, *&amp;lt;*, *&amp;gt;* (and *&amp;quot;*), respectively.
-2. On all text nodes that are gathered with the XPath, the regular expression with *pattern* and *replacement* is directly applied. For all other node types, the regular expression is applied on all their children that are text nodes.
+2. On all text nodes that are gathered with the XPath, the regular expression with *pattern* and *replacement* is directly applied. For all other node types, the regular expression is applied to all their children that are text nodes.
 
 ####Namespaces
 For feeds with default namespaces (e.g. Atom and RDF documents),
@@ -107,16 +120,18 @@ you can register namespaces manually.
 To do so, simply put a *namespaces* entry in the configuration object:
 
 ```json
-[
-	{
-		"URL" : …
-		…
-		"namespaces" : {"pre1": "uri1", "pre2": "uri2"}
-	}
-]
+{
+	"URL" : …,
+	"type" : "xpath_regex",
+	…
+	"namespaces" : {"pre1": "uri1", "pre2": "uri2"}
+}
 ```
 
-If the namespaces key is present, the automatic detection is disabled.
+The *uri* entries should be the namespace URIs,
+and the *pre* entries are the prefixes to be used in the path queries.
+
+If the *namespaces* key is present, the automatic namespace detection is disabled.
 
 ###Examples
 We explain what the entries in the given example configuration do.
