@@ -230,11 +230,10 @@ EOT;
 			$temp_node = $sheet->appendChild($temp_node);
 			
 			$fragment = $xsldoc->createDocumentFragment();
-			$proot = 'proot';
-			$fragment->appendXML("<$proot xmlns:xsl='http://www.w3.org/1999/XSL/Transform'>" . $temp['body'] . "</$proot>");
+			$fragment->appendXML("<root xmlns:xsl='http://www.w3.org/1999/XSL/Transform'>" . $temp['body'] . "</root>");
 	
 			$temp_node->appendChild($fragment);
-			$node = $xsldoc->getElementsByTagName("$proot")->item(0);
+			$node = $temp_node->childNodes->item(0);
 
 			while($node->childNodes->length) {
 				$child = $node->childNodes->item(0);
@@ -292,14 +291,14 @@ EOT;
 			foreach($config['namespaces'] as $prefix => $URI)
 				$xpath->registerNamespace($prefix, $URI);
 		else {
-			$NS = array(
+			$DNS = array(
 			"http://www.w3.org/2005/Atom",
 			"http://purl.org/rss/1.0/",
 			'http://purl.org/atom/ns#',
 			);
-			foreach($NS as $URI) {
+			foreach($DNS as $URI) {
 				if($xpath->document->isDefaultNamespace($URI)) {
-					$xpath->registerNamespace("NS", $URI);
+					$xpath->registerNamespace("DNS", $URI);
 					break;
 				}
 			}

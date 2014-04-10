@@ -86,6 +86,38 @@ With this type, some subtleties have to be regarded.
 1. When the feed is loaded, all five [predefined entities](http://www.w3.org/TR/REC-xml/#sec-predefined-ent) are converted to their real values. When saving, only *&*, *<*, *>* (and in attributes, also *"*) are converted back to *&amp;amp;*, *&amp;lt;*, *&amp;gt;* (and *&amp;quot;*), respectively.
 2. On all text nodes that are gathered with the XPath, the regular expression with *pattern* and *replacement* is directly applied. For all other node types, the regular expression is applied on all their children that are text nodes.
 
+####Namespaces
+For feeds with default namespaces (e.g. Atom and RDF documents),
+querying with xpaths was possible, but a bit of a pain.
+In order to ease this, support for namespaces was added.
+The software tries to detect if the document has one of the following
+default namespaces
+
+* http://www.w3.org/2005/Atom
+* http://purl.org/rss/1.0/
+* http://purl.org/atom/ns#
+
+and if it does, registers it under the prefix *DNS* (Default Name Space).
+Xpath queries then simply have to be prefixed,
+e.g. to query for the feed entries in an Atom feed,
+the query string can be *"//DNS:feed//DNS:entry"*.
+
+If more namespaces are needed, or the automatic detection gets it wrong,
+you can register namespaces manually.
+To do so, simply put a *namespaces* entry in the configuration object:
+
+```json
+[
+	{
+		"URL" : …
+		…
+		"namespaces" : {"pre1": "uri1", "pre2": "uri2"}
+	}
+]
+```
+
+If the namespaces key is present, the automatic detection is disabled.
+
 ###Examples
 We explain what the entries in the given example configuration do.
 
