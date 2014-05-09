@@ -35,13 +35,13 @@ class ff_FeedCleaner extends Plugin
 		*/
 		$host->add_hook($host::HOOK_FEED_FETCHED, $this);
 	}
-	
+
 
 	//implement fetch hooks
 	function hook_feed_fetched($feed_data, $fetch_url, $owner_uid, $feed_id)
 	{
 		$json_conf = $this->host->get($this, 'json_conf');
-		
+
 		$data = json_decode($json_conf, true);
 		$debug_conf = sql_bool_to_bool($this->host->get($this, 'debug', bool_to_sql_bool(FALSE)));
 		$this->debug = $debug_conf || $this->host->get_debug();
@@ -49,26 +49,26 @@ class ff_FeedCleaner extends Plugin
 		$auto_correct = sql_bool_to_bool($this->host->get($this, 'auto_correct', bool_to_sql_bool(FALSE)));
 		if($auto_correct)
 			$feed_data = $this->auto_correct($feed_data, $fetch_url);
-		
+
 		if (!is_array($data)) {
 			user_error('No or malformed configuration stored', E_USER_WARNING);
 			return $feed_data;
 		}
-		
+
 		foreach($data as $index => $config) {
 			$test = false;
-			
+
 			//Legacy reminder
 			if(!is_numeric($index) && !array_key_exists('URL_re', $config) && !array_key_exists('URL', $config))
 				user_error('Please convert your configuration. Check https://github.com/wltb/ff_feedcleaner/blob/master/conf_conv.md for details.', E_USER_WARNING);
-				
+
 			if(array_key_exists('URL', $config))
 				$test = (strpos($fetch_url, $config['URL']) !== false);
 			elseif(array_key_exists('URL_re', $config))
 				$test = (preg_match($config['URL_re'], $fetch_url) === 1);
 			else
 				user_error('For ' . json_encode($config) . ': Neither URL nor URL_re key is present', E_USER_WARNING);
-			
+
 			if( $test ){
 				if($this->debug)
 					user_error('Modifying ' . $fetch_url . ' with ' . json_encode($config), E_USER_NOTICE);
@@ -90,7 +90,7 @@ class ff_FeedCleaner extends Plugin
 				}
 			}
 		}
-		
+
 		return $feed_data;
 	}
 
@@ -196,15 +196,15 @@ class ff_FeedCleaner extends Plugin
 			if($this->debug)
 				user_error('No encoding declared or encoding is UTF-8 already', E_USER_NOTICE);
 		}
-	
+
 		return $feed_data;
 	}
-	
+
 	function xslt($feed_data, $config)
 	{
 		$xsl = <<<'EOT'
 <?xml version="1.0" encoding="UTF-8"?>
-<xsl:stylesheet version="1.0" 
+<xsl:stylesheet version="1.0"
 	 xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
 	 xmlns:php="http://php.net/xsl">
 	<xsl:output method="xml" encoding="utf-8" indent="yes"/>
@@ -216,22 +216,22 @@ class ff_FeedCleaner extends Plugin
 	</xsl:template>
 </xsl:stylesheet>
 EOT;
-		
+
 		$xsldoc = new DOMDocument();
 		$xsldoc->loadXML($xsl);
 
 		$sheet = $xsldoc->childNodes->item(0);
-		
+
 		foreach($config['templates'] as $temp) {
 			$temp_node = $xsldoc->createElementNS("http://www.w3.org/1999/XSL/Transform", "xsl:template");
 			foreach($temp['attributes'] as $name => $value) {
 				$temp_node->setAttribute($name, $value);
 			}
 			$temp_node = $sheet->appendChild($temp_node);
-			
+
 			$fragment = $xsldoc->createDocumentFragment();
 			$fragment->appendXML("<root xmlns:xsl='http://www.w3.org/1999/XSL/Transform'>" . $temp['body'] . "</root>");
-	
+
 			$temp_node->appendChild($fragment);
 			$node = $temp_node->childNodes->item(0);
 
@@ -251,33 +251,33 @@ EOT;
 		$proc->importStyleSheet($xsldoc);
 
 		$doc = new DOMDocument();
-		$doc->loadXML($feed_data);		
+		$doc->loadXML($feed_data);
 
 		$res = $proc->transformToXML($doc);
 		if($res === FALSE) {
 			$res = $feed_data;
 			user_error("Error during XSL transformation for ". json_encode($config), E_USER_WARNING);
 		}
-		
+
 		return $res;
 	}
-	
+
 	function apply_regex($feed_data, $config)
 	{
 		$pat = $config["pattern"];
 		$rep = $config["replacement"];
-		
+
 		$feed_data_mod = preg_replace($pat, $rep, $feed_data, -1, $count);
-		
+
 		if($feed_data_mod !== NULL)
 			$feed_data = $feed_data_mod;
 		else {
 			$count = 0;
 		}
-		
+
 		if($this->debug)
 			user_error('Applied (pattern "' . $pat . '", replacement "' . $rep . '") ' . $count . ' times', E_USER_NOTICE);
-		
+
 		return $feed_data;
 	}
 
@@ -286,7 +286,7 @@ EOT;
 		$doc = new DOMDocument();
 		$doc->loadXML($feed_data);
 		$xpath = new DOMXPath($doc);
-		
+
 		if(isset($config['namespaces']) && is_array($config['namespaces']))
 			foreach($config['namespaces'] as $prefix => $URI)
 				$xpath->registerNamespace($prefix, $URI);
@@ -305,13 +305,13 @@ EOT;
 		}
 
 		$node_list = $xpath->query($config['xpath']);
-		
+
 		$pat = $config["pattern"];
 		$rep = $config["replacement"];
-		
+
 		if($this->debug)
 			user_error('Found ' . $node_list->length . ' nodes with XPath "' . $config['xpath'] . '"', E_USER_NOTICE);
-		
+
 		$preg_rep_func = function($node) use ($pat, $rep, &$counter) {
 			if( $node->nodeType == XML_TEXT_NODE) {
 				$text_mod = preg_replace($pat, $rep, $node->textContent, -1, $count);
@@ -328,13 +328,13 @@ EOT;
 				foreach($node->childNodes as $child)
 					$preg_rep_func($child);
 		}
-		
+
 		if($this->debug)
 			user_error('Applied (pattern "' . $pat . '", replacement "' . $rep . '") ' . $counter . ' times', E_USER_NOTICE);
-		
+
 		return $doc->saveXML();
 	}
-	
+
 	//gui hook stuff
 	function hook_prefs_tabs($args)
 	{
@@ -345,9 +345,9 @@ EOT;
 
 	function index()
 	{
-		$pluginhost = PluginHost::getInstance();		
+		$pluginhost = PluginHost::getInstance();
 		$json_conf = $pluginhost->get($this, 'json_conf');
-		
+
 		$debug = sql_bool_to_bool($this->host->get($this, "debug", bool_to_sql_bool(FALSE)));
 		if ($debug) {
 			$debugChecked = "checked=\"1\"";
@@ -360,7 +360,7 @@ EOT;
 		} else {
 			$auto_correctChecked = "";
 		}
-		
+
 		print '<form dojoType="dijit.form.Form" accept-charset="UTF-8" style="overflow:auto;">';
 
 		print "<script type=\"dojo/method\" event=\"onSubmit\" args=\"evt\">
@@ -384,7 +384,7 @@ EOT;
 		print "<table width='100%'><tr><td>";
 		print "<textarea dojoType=\"dijit.form.SimpleTextarea\" name=\"json_conf\" style=\"font-size: 12px; width: 99%; height: 500px;\">" . htmlspecialchars($json_conf, ENT_NOQUOTES, 'UTF-8') . "</textarea>";
 		print "</td></tr></table>";
-		
+
 		print "<table width='30%' style=\"border:3px ridge grey;\">";
 		print "<tr><td width=\"95%\"><label for=\"debug_id\">".__("Enable extended logging")."</label></td>";
 		print "<td class=\"prefValue\"><input dojoType=\"dijit.form.CheckBox\" type=\"checkbox\" name=\"debug\" id=\"debug_id\" $debugChecked></td></tr>";
@@ -405,11 +405,11 @@ EOT;
 			echo __("error: Invalid JSON!");
 			return false;
 		}
-		
+
 		$this->host->set($this, 'json_conf', $json_conf);
 		$this->host->set($this, 'debug', checkbox_to_sql_bool($_POST["debug"]));
 		$this->host->set($this, 'auto_correct', checkbox_to_sql_bool($_POST["auto_correct"]));
-		
+
 		echo __("Configuration saved.");
 	}
 
