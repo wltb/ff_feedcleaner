@@ -102,77 +102,31 @@ class ff_FeedCleaner extends Plugin
 
 	//helper functions
 	function auto_correct($feed_data, $fetch_url) {
-		$modified = false;
-
-		libxml_use_internal_errors(true);
-		libxml_clear_errors();
-		$doc = new DOMDocument();
-		@$doc->loadXML($feed_data);
-		$error = libxml_get_last_error();
-
-		// libxml compiled without iconv?
-		if ($error && $error->code == 32) {
-			if($this->debug)
-				user_error("Trying to convert encoding of feed '$fetch_url' to UTF-8", E_USER_NOTICE);
-			$feed_data = $this->enc_utf8($feed_data, array('URL' => $fetch_url, 'type' => 'auto-correct'));
-
-			$modified = true;
-			
-			libxml_clear_errors();
-			$doc = new DOMDocument();
-			@$doc->loadXML($feed_data);
-
-			$error = libxml_get_last_error();
+	/* Use the corrections implemented in the FeedParser class */
+		static $ref;
+		static $p;
+		if(!$ref) { #initialize reflection
+			$ref = new ReflectionClass('FeedParser');
+			$p = $ref->getProperty('doc');
+			$p->setAccessible(true);
 		}
-		
-		if($error) {
-			foreach(libxml_get_errors() as $err) {
-				if ($err && $err->code == 9) {
-					if($this->debug)
-						user_error("Trying to convert encoding of feed '$fetch_url' to UTF-8", E_USER_NOTICE);
-					$data = $this->enc_utf8($feed_data, array('URL' => $fetch_url, 'type' => 'auto-correct'));
-					
-					mb_substitute_character("none");
-					$data = mb_convert_encoding($data, 'UTF-8', 'UTF-8');
 
-					$data = preg_replace('/[^\x{0009}\x{000a}\x{000d}\x{0020}-\x{D7FF}\x{E000}-\x{FFFD}]+/u', ' ', $data, -1, $count);
+		$fp = new FeedParser($feed_data);
+		$feed_data_mod = $p->getValue($fp)->saveXML();
 
-					if($data) {
-						$modified = true;
-						$feed_data = $data;
-						
-						if($this->debug)
-							user_error("Replaced $count invalid character(s) for '$fetch_url'", E_USER_NOTICE);
-						libxml_clear_errors();
-
-						$doc = new DOMDocument();
-						@$doc->loadXML($feed_data);
-
-						$error = libxml_get_last_error();
-					}
-					else
-						user_error("Feed '$fetch_url': Couldn't clean faulty unicode entity", E_USER_WARNING);
-					break;
-				}
-			}	
-		}
-		
-		if($modified && $this->debug)
+		/*
+		 String comaprison won't do no good here.
+		 It would be better to use something like
+		  http://www.php.net/manual/en/book.xmldiff.php
+		 but that may not be available everywhere.
+		if($this->debug && $feed_data != $feed_data_mod) {
 			user_error("Tried to auto correct feed '$fetch_url'", E_USER_NOTICE);
-
-		if($error && $this->debug) {
-			foreach(libxml_get_errors() as $error) {
-				if($error->level == LIBXML_ERR_FATAL) {
-					user_error(sprintf("For feed '$fetch_url': LibXML error %s at line %d (column %d): %s",
-						$error->code, $error->line, $error->column, $error->message),
-					E_USER_WARNING);
-				}
-			}
 		}
-		
-		return $feed_data;
+		*/
+
+		return $feed_data_mod;
 	}
-	
+
 	function enc_utf8($feed_data, $config) {
 		$decl_regex =
 			'/^(<\?xml
