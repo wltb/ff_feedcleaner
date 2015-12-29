@@ -293,38 +293,45 @@ EOT;
 			$debugChecked = "";
 		}
 
-		print '<form dojoType="dijit.form.Form" accept-charset="UTF-8" style="overflow:auto;">';
-
-		print "<script type=\"dojo/method\" event=\"onSubmit\" args=\"evt\">
-			evt.preventDefault();
-			if (this.validate()) {
-			new Ajax.Request('backend.php', {
-					parameters: dojo.objectToQuery(this.getValues()),
-					onComplete: function(transport) {
-						if (transport.responseText.indexOf('error')>=0) notify_error(transport.responseText);
-						else notify_info(transport.responseText);
-					}
-				});
-				//this.reset();
+		?>
+<form dojoType="dijit.form.Form" accept-charset="UTF-8" style="overflow:auto;">
+<script type="dojo/method" event="onSubmit" args="evt">
+	evt.preventDefault();
+	if (this.validate()) {
+		var values = this.getValues();
+		values.op = "pluginhandler";
+		values.method = "save";
+		values.plugin = "<?php print strtolower(get_class());?>";
+		new Ajax.Request('backend.php', {
+			parameters: dojo.objectToQuery(values),
+			onComplete: function(transport) {
+				if (transport.responseText.indexOf('error')>=0) notify_error(transport.responseText);
+				else notify_info(transport.responseText);
 			}
-			</script>";
+		});
+		//this.reset();
+	}
+</script>
+<table width='100%'><tr><td>
+	<textarea dojoType="dijit.form.SimpleTextarea" name="json_conf"
+		style="font-size: 12px; width: 99%; height: 500px;"
+		><?php echo htmlspecialchars($json_conf, ENT_NOQUOTES, 'UTF-8');?></textarea>
+</td></tr></table>
 
-		print "<input dojoType=\"dijit.form.TextBox\" style=\"display : none\" name=\"op\" value=\"pluginhandler\">";
-		print "<input dojoType=\"dijit.form.TextBox\" style=\"display : none\" name=\"method\" value=\"save\">";
-		print "<input dojoType=\"dijit.form.TextBox\" style=\"display : none\" name=\"plugin\" value=\"" . strtolower(get_class()) . "\">";
+<table width='30%' style="border:3px ridge grey;"><tr>
+	<td width="95%">
+	<label for="debug_id"><?php echo __("Enable extended logging");?></label>
+	</td>
+	<td class="prefValue">
+		<input dojoType="dijit.form.CheckBox" type="checkbox" name="debug" id="debug_id"
+			<?php print $debugChecked;?>>
+	</td>
+	</tr>
+</table>
+<p><button dojoType="dijit.form.Button" type="submit"><?php print __("Save");?></button></p>
+</form>
 
-		print "<table width='100%'><tr><td>";
-		print "<textarea dojoType=\"dijit.form.SimpleTextarea\" name=\"json_conf\" style=\"font-size: 12px; width: 99%; height: 500px;\">" . htmlspecialchars($json_conf, ENT_NOQUOTES, 'UTF-8') . "</textarea>";
-		print "</td></tr></table>";
-
-		print "<table width='30%' style=\"border:3px ridge grey;\">";
-		print "<tr><td width=\"95%\"><label for=\"debug_id\">".__("Enable extended logging")."</label></td>";
-		print "<td class=\"prefValue\"><input dojoType=\"dijit.form.CheckBox\" type=\"checkbox\" name=\"debug\" id=\"debug_id\" $debugChecked></td></tr>";
-		print "</table>";
-
-		print "<p><button dojoType=\"dijit.form.Button\" type=\"submit\">".__("Save")."</button>";
-
-		print "</form>";
+		<?php
 	}
 
 	function save()
