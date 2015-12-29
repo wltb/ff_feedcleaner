@@ -34,8 +34,10 @@ class ff_FeedCleaner extends Plugin
 		$host->add_hook($host::HOOK_FETCH_FEED, $this);
 		*/
 		$host->add_hook($host::HOOK_FEED_FETCHED, $this);
+		$host->add_hook($host::HOOK_FEED_PARSED, $this);
 	}
 
+	private $feed_parsed = array();
 
 	//implement fetch hooks
 	function hook_feed_fetched($feed_data, $fetch_url, $owner_uid, $feed_id)
@@ -45,10 +47,6 @@ class ff_FeedCleaner extends Plugin
 		$data = json_decode($json_conf, true);
 		$debug_conf = sql_bool_to_bool($this->host->get($this, 'debug', bool_to_sql_bool(FALSE)));
 		$this->debug = $debug_conf || $this->host->get_debug();
-
-		$auto_correct = sql_bool_to_bool($this->host->get($this, 'auto_correct', bool_to_sql_bool(FALSE)));
-		if($auto_correct)
-			$feed_data = $this->auto_correct($feed_data, $fetch_url);
 
 		if (!is_array($data)) {
 			user_error('No or malformed configuration stored', E_USER_WARNING);
@@ -70,10 +68,10 @@ class ff_FeedCleaner extends Plugin
 					user_error('Modifying ' . $fetch_url . ' with ' . json_encode($config), E_USER_NOTICE);
 				switch (strtolower($config["type"])) {
 					case "regex":
-						$feed_data = $this->apply_regex($feed_data, $config);
+						$feed_data = self::apply_regex($feed_data, $config, $this->debug);
 						break;
 					case "xpath_regex":
-						$feed_data = $this->apply_xpath_regex($feed_data, $config);
+						$this->feed_parsed [] = $config;
 						break;
 					case "utf-8":
 						$feed_data = $this->enc_utf8($feed_data, $config);
@@ -96,31 +94,26 @@ class ff_FeedCleaner extends Plugin
 	}
 	*/
 
-	//helper functions
-	function auto_correct($feed_data, $fetch_url) {
-	/* Use the corrections implemented in the FeedParser class */
+	function hook_feed_parsed($rss) {
 		static $ref;
-		static $p;
+		static $p_xpath;
 		if(!$ref) { #initialize reflection
 			$ref = new ReflectionClass('FeedParser');
-			$p = $ref->getProperty('doc');
-			$p->setAccessible(true);
+			$p_xpath = $ref->getProperty('xpath');
+			$p_xpath->setAccessible(true);
 		}
 
-		$fp = new FeedParser($feed_data);
-		$feed_data_mod = $p->getValue($fp)->saveXML();
+		$xpath = $p_xpath->getValue($rss);
+		//$xpath->registerNamespace('rssfake', "http://purl.org/rss/1.0/");
 
-		/*
-		 String comaprison won't do no good here.
-		 It would be better to use something like
-		  http://www.php.net/manual/en/book.xmldiff.php
-		 but that may not be available everywhere.
-		if($this->debug && $feed_data != $feed_data_mod) {
-			user_error("Tried to auto correct feed '$fetch_url'", E_USER_NOTICE);
+		foreach($this->feed_parsed as $config) {
+			//var_dump($config);
+			switch (strtolower($config["type"])) {
+			case "xpath_regex":
+				self::apply_xpath_regex($xpath, $config, $this->debug);
+				break;
+			}
 		}
-		*/
-
-		return $feed_data_mod;
 	}
 
 	function enc_utf8($feed_data, $config) {
@@ -212,7 +205,7 @@ EOT;
 		return $res;
 	}
 
-	function apply_regex($feed_data, $config)
+	static function apply_regex($feed_data, $config, $debug=false)
 	{
 		$pat = $config["pattern"];
 		$rep = $config["replacement"];
@@ -225,22 +218,17 @@ EOT;
 			$count = 0;
 		}
 
-		if($this->debug)
+		if($debug)
 			user_error('Applied (pattern "' . $pat . '", replacement "' . $rep . '") ' . $count . ' times', E_USER_NOTICE);
 
 		return $feed_data;
 	}
 
-	function apply_xpath_regex($feed_data, $config)
-	{
-		$doc = new DOMDocument();
-		$doc->loadXML($feed_data);
-		$xpath = new DOMXPath($doc);
-
+	static function apply_xpath_regex($xpath, $config, $debug=false) {
 		if(isset($config['namespaces']) && is_array($config['namespaces']))
 			foreach($config['namespaces'] as $prefix => $URI)
 				$xpath->registerNamespace($prefix, $URI);
-		else {
+		else { //TODO remove this
 			$DNS = array(
 			"http://www.w3.org/2005/Atom",
 			"http://purl.org/rss/1.0/",
@@ -259,7 +247,7 @@ EOT;
 		$pat = $config["pattern"];
 		$rep = $config["replacement"];
 
-		if($this->debug)
+		if($debug)
 			user_error('Found ' . $node_list->length . ' nodes with XPath "' . $config['xpath'] . '"', E_USER_NOTICE);
 
 		$preg_rep_func = function($node) use ($pat, $rep, &$counter) {
@@ -275,14 +263,14 @@ EOT;
 		foreach($node_list as $node) {
 			$preg_rep_func($node);
 			if($node->hasChildNodes())
+				// This also works for DOMAttributes because apparently,
+				// their nodeValue is stored in a TextNode child.
 				foreach($node->childNodes as $child)
 					$preg_rep_func($child);
 		}
 
-		if($this->debug)
+		if($debug)
 			user_error('Applied (pattern "' . $pat . '", replacement "' . $rep . '") ' . $counter . ' times', E_USER_NOTICE);
-
-		return $doc->saveXML();
 	}
 
 	//gui hook stuff
@@ -303,12 +291,6 @@ EOT;
 			$debugChecked = "checked=\"1\"";
 		} else {
 			$debugChecked = "";
-		}
-		$auto_correct = sql_bool_to_bool($this->host->get($this, "auto_correct", bool_to_sql_bool(FALSE)));
-		if ($auto_correct) {
-			$auto_correctChecked = "checked=\"1\"";
-		} else {
-			$auto_correctChecked = "";
 		}
 
 		print '<form dojoType="dijit.form.Form" accept-charset="UTF-8" style="overflow:auto;">';
@@ -338,8 +320,6 @@ EOT;
 		print "<table width='30%' style=\"border:3px ridge grey;\">";
 		print "<tr><td width=\"95%\"><label for=\"debug_id\">".__("Enable extended logging")."</label></td>";
 		print "<td class=\"prefValue\"><input dojoType=\"dijit.form.CheckBox\" type=\"checkbox\" name=\"debug\" id=\"debug_id\" $debugChecked></td></tr>";
-		print "<tr><td width=\"95%\"><label for=\"auto_correct_id\">".__("Enable automatic correction")."</label></td>";
-		print "<td class=\"prefValue\"><input dojoType=\"dijit.form.CheckBox\" type=\"checkbox\" name=\"auto_correct\" id=\"auto_correct_id\" $auto_correctChecked></td></tr>";
 		print "</table>";
 
 		print "<p><button dojoType=\"dijit.form.Button\" type=\"submit\">".__("Save")."</button>";
@@ -358,7 +338,6 @@ EOT;
 
 		$this->host->set($this, 'json_conf', $json_conf);
 		$this->host->set($this, 'debug', checkbox_to_sql_bool($_POST["debug"]));
-		$this->host->set($this, 'auto_correct', checkbox_to_sql_bool($_POST["auto_correct"]));
 
 		echo __("Configuration saved.");
 	}
