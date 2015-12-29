@@ -76,9 +76,6 @@ class ff_FeedCleaner extends Plugin
 					case "utf-8":
 						$feed_data = $this->enc_utf8($feed_data, $config);
 						break;
-					case "xslt":
-						$feed_data = $this->xslt($feed_data, $config);
-						break;
 					default:
 						continue;
 				}
@@ -141,68 +138,6 @@ class ff_FeedCleaner extends Plugin
 		}
 
 		return $feed_data;
-	}
-
-	function xslt($feed_data, $config)
-	{
-		$xsl = <<<'EOT'
-<?xml version="1.0" encoding="UTF-8"?>
-<xsl:stylesheet version="1.0"
-	 xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
-	 xmlns:php="http://php.net/xsl">
-	<xsl:output method="xml" encoding="utf-8" indent="yes"/>
-
-	<xsl:template match="@* | node()" priority="-2">
-		<xsl:copy>
-			<xsl:apply-templates select="@* | node()"/>
-		</xsl:copy>
-	</xsl:template>
-</xsl:stylesheet>
-EOT;
-
-		$xsldoc = new DOMDocument();
-		$xsldoc->loadXML($xsl);
-
-		$sheet = $xsldoc->childNodes->item(0);
-
-		foreach($config['templates'] as $temp) {
-			$temp_node = $xsldoc->createElementNS("http://www.w3.org/1999/XSL/Transform", "xsl:template");
-			foreach($temp['attributes'] as $name => $value) {
-				$temp_node->setAttribute($name, $value);
-			}
-			$temp_node = $sheet->appendChild($temp_node);
-
-			$fragment = $xsldoc->createDocumentFragment();
-			$fragment->appendXML("<root xmlns:xsl='http://www.w3.org/1999/XSL/Transform'>" . $temp['body'] . "</root>");
-
-			$temp_node->appendChild($fragment);
-			$node = $temp_node->childNodes->item(0);
-
-			while($node->childNodes->length) {
-				$child = $node->childNodes->item(0);
-				$temp_node->appendChild($child);
-			}
-			$temp_node->removeChild($node);
-		}
-		if($this->debug) {
-			$xsldoc->formatOutput = true;
-			user_error("Applying XSL transformation {$xsldoc->saveXML()}", E_USER_NOTICE);
-		}
-
-		$proc = new XSLTProcessor();
-		#$proc->registerPHPFunctions();
-		$proc->importStyleSheet($xsldoc);
-
-		$doc = new DOMDocument();
-		$doc->loadXML($feed_data);
-
-		$res = $proc->transformToXML($doc);
-		if($res === FALSE) {
-			$res = $feed_data;
-			user_error("Error during XSL transformation for ". json_encode($config), E_USER_WARNING);
-		}
-
-		return $res;
 	}
 
 	static function apply_regex($feed_data, $config, $debug=false)
