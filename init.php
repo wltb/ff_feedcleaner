@@ -74,7 +74,7 @@ class ff_FeedCleaner extends Plugin
 						$this->feed_parsed [] = $config;
 						break;
 					case "utf-8":
-						$feed_data = $this->enc_utf8($feed_data, $config);
+						$feed_data = self::enc_utf8($feed_data, $config, $this->debug);
 						break;
 					default:
 						continue;
@@ -92,6 +92,8 @@ class ff_FeedCleaner extends Plugin
 	*/
 
 	function hook_feed_parsed($rss) {
+		if(!$this->feed_parsed)
+			return;
 		static $ref;
 		static $p_xpath;
 		if(!$ref) { #initialize reflection
@@ -113,7 +115,7 @@ class ff_FeedCleaner extends Plugin
 		}
 	}
 
-	function enc_utf8($feed_data, $config) {
+	static function enc_utf8($feed_data, $config, $debug) {
 		$decl_regex =
 			'/^(<\?xml
 				[\t\n\r ]+version[\t\n\r ]*=[\t\n\r ]*["\']1\.[0-9]+["\']
@@ -126,14 +128,14 @@ class ff_FeedCleaner extends Plugin
 			if($data !== false)
 			{
 				$feed_data = preg_replace($decl_regex, $matches[1] . "UTF-8" . $matches[3], $data);
-				if($this->debug)
+				if($debug)
 					user_error('Encoding conversion to UTF-8 was successful', E_USER_NOTICE);
 			}
 			else
 				user_error('For ' . json_encode($config) . ": Couldn't convert the encoding", E_USER_WARNING);
 		}
 		else {
-			if($this->debug)
+			if($debug)
 				user_error('No encoding declared or encoding is UTF-8 already', E_USER_NOTICE);
 		}
 
