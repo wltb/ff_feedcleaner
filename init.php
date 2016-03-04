@@ -30,30 +30,32 @@ class ff_FeedCleaner extends Plugin
 		}
 
 		$host->add_hook($host::HOOK_PREFS_TABS, $this);
-		/*
-		$host->add_hook($host::HOOK_FETCH_FEED, $this);
-		*/
 		$host->add_hook($host::HOOK_FEED_FETCHED, $this);
 		$host->add_hook($host::HOOK_FEED_PARSED, $this);
 	}
 
-	private $feed_parsed = array();
-
 	//implement fetch hooks
-	function hook_feed_fetched($feed_data, $fetch_url, $owner_uid, $feed_id)
+	function hook_feed_fetched($feed_data, $fetch_url)
 	{
 		$json_conf = $this->host->get($this, 'json_conf');
-
-		$data = json_decode($json_conf, true);
 		$debug_conf = sql_bool_to_bool($this->host->get($this, 'debug', bool_to_sql_bool(FALSE)));
 		$this->debug = $debug_conf || $this->host->get_debug();
 
+		$res = self::hook1($feed_data, $fetch_url, $json_conf, $this->debug);
+		if($res) list($feed_data, $this->feed_parsed) = $res;
+
+		return $feed_data;
+	}
+
+	static function hook1($feed_data, $fetch_url, $json_conf, $debug=False) {
+		$data = json_decode($json_conf, true);
 		if (!is_array($data)) {
 			user_error('No or malformed configuration stored', E_USER_WARNING);
-			return $feed_data;
+			return;
 		}
 
-		foreach($data as $index => $config) {
+		$later = array();
+		foreach($data as $config) {
 			$test = false;
 
 			if(array_key_exists('URL', $config))
@@ -64,17 +66,17 @@ class ff_FeedCleaner extends Plugin
 				user_error('For ' . json_encode($config) . ': Neither URL nor URL_re key is present', E_USER_WARNING);
 
 			if( $test ){
-				if($this->debug)
+				if($debug)
 					user_error('Modifying ' . $fetch_url . ' with ' . json_encode($config), E_USER_NOTICE);
 				switch (strtolower($config["type"])) {
 					case "regex":
-						$feed_data = self::apply_regex($feed_data, $config, $this->debug);
+						$feed_data = self::apply_regex($feed_data, $config, $debug);
 						break;
 					case "xpath_regex":
-						$this->feed_parsed [] = $config;
+						$later [] = $config;
 						break;
 					case "utf-8":
-						$feed_data = self::enc_utf8($feed_data, $config, $this->debug);
+						$feed_data = self::enc_utf8($feed_data, $config, $debug);
 						break;
 					default:
 						continue;
@@ -82,34 +84,31 @@ class ff_FeedCleaner extends Plugin
 			}
 		}
 
-		return $feed_data;
+		return array($feed_data, $later);
 	}
 
-	/*
-	function hook_fetch_feed($feed_data, $fetch_url, $owner_uid, $feed_id){
-		return false;
-	}
-	*/
 
 	function hook_feed_parsed($rss) {
 		if(!$this->feed_parsed)
 			return;
-		static $ref;
+		self::hook2($rss, $this->feed_parsed, $this->debug);
+	}
+
+	static function hook2($rss, $config_data, $debug=False) {
 		static $p_xpath;
-		if(!$ref) { #initialize reflection
+		if(!$p_xpath) { #initialize reflection
 			$ref = new ReflectionClass('FeedParser');
 			$p_xpath = $ref->getProperty('xpath');
 			$p_xpath->setAccessible(true);
 		}
-
 		$xpath = $p_xpath->getValue($rss);
 		//$xpath->registerNamespace('rssfake', "http://purl.org/rss/1.0/");
 
-		foreach($this->feed_parsed as $config) {
+		foreach($config_data as $config) {
 			//var_dump($config);
 			switch (strtolower($config["type"])) {
 			case "xpath_regex":
-				self::apply_xpath_regex($xpath, $config, $this->debug);
+				self::apply_xpath_regex($xpath, $config, $debug);
 				break;
 			}
 		}
