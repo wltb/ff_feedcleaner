@@ -114,54 +114,6 @@ class ff_FeedCleaner extends Plugin
 		}
 	}
 
-	function format_save_tmp($data) {
-		$xml = new DOMDocument();
-		$xml->preserveWhiteSpace = false;
-		$xml->formatOutput = true;
-		$xml->loadXML($data);
-
-		$filename = tempnam(sys_get_temp_dir(), '');
-		$outXML = $xml->save($filename);
-
-		return $filename;
-	}
-
-	const diff_cmd = 'diff -U 0 -s ';
-
-	static function compute_diff($url, $json_data) {
-		$con = fetch_file_contents($url);
-		if(!$con) return;
-
-		$res = self::hook1($con, $url, $json_data);
-		if($res) list($feed_data, $config_data) = $res;
-		else return;
-
-		//if(!$config_data) return;
-
-		$rss = new FeedParser($feed_data);
-		$rss->init();
-		if(!$rss->error()) {
-			self::hook2($rss, $config_data);
-
-			$ref = new ReflectionClass('FeedParser');
-			$p_doc = $ref->getProperty('doc');
-			$p_doc->setAccessible(true);
-
-			$doc = $p_doc->getValue($rss);
-			$new_feed_data = $doc->saveXML();
-
-			$old_file = self::format_save_tmp($feed_data);
-			$new_file = self::format_save_tmp($new_feed_data);
-			$diff = '';
-			$res = system(self::diff_cmd . " $old_file $new_file", $diff);
-			unlink($old_file);
-			unlink($new_file);
-			if($res !== False) {
-				print $diff;
-			}
-		}
-	}
-
 	static function enc_utf8($feed_data, $config, $debug) {
 		$decl_regex =
 			'/^(<\?xml
@@ -278,42 +230,75 @@ class ff_FeedCleaner extends Plugin
 		}
 
 		?>
-<form dojoType="dijit.form.Form" accept-charset="UTF-8" style="overflow:auto;">
-<script type="dojo/method" event="onSubmit" args="evt">
-	evt.preventDefault();
-	if (this.validate()) {
-		var values = this.getValues();
-		values.op = "pluginhandler";
-		values.method = "save";
-		values.plugin = "<?php print strtolower(get_class());?>";
-		new Ajax.Request('backend.php', {
-			parameters: dojo.objectToQuery(values),
-			onComplete: function(transport) {
-				if (transport.responseText.indexOf('error')>=0) notify_error(transport.responseText);
-				else notify_info(transport.responseText);
-			}
-		});
-		//this.reset();
-	}
-</script>
-<table width='100%'><tr><td>
-	<textarea dojoType="dijit.form.SimpleTextarea" name="json_conf"
-		style="font-size: 12px; width: 99%; height: 500px;"
-		><?php echo htmlspecialchars($json_conf, ENT_NOQUOTES, 'UTF-8');?></textarea>
-</td></tr></table>
+<div data-dojo-type="dijit/layout/AccordionContainer" style="height:100%;">
+	<div data-dojo-type="dijit/layout/ContentPane" title="<?php print __('Preferences'); ?>" selected="true">
+	<form dojoType="dijit.form.Form" accept-charset="UTF-8" style="overflow:auto;"
+	id="feedcleaner_settings">
+	<script type="dojo/method" event="onSubmit" args="evt">
+		evt.preventDefault();
+		if (this.validate()) {
+			var values = this.getValues();
+			values.op = "pluginhandler";
+			values.method = "save";
+			values.plugin = "<?php print strtolower(get_class());?>";
+			new Ajax.Request('backend.php', {
+				parameters: dojo.objectToQuery(values),
+				onComplete: function(transport) {
+					if (transport.responseText.indexOf('error')>=0) notify_error(transport.responseText);
+					else notify_info(transport.responseText);
+				}
+			});
+			//this.reset();
+		}
+	</script>
+	<table width='100%'><tr><td>
+		<textarea dojoType="dijit.form.SimpleTextarea" name="json_conf"
+			style="font-size: 12px; width: 99%; height: 500px;"
+			><?php echo htmlspecialchars($json_conf, ENT_NOQUOTES, 'UTF-8');?></textarea>
+	</td></tr></table>
 
-<table width='30%' style="border:3px ridge grey;"><tr>
-	<td width="95%">
-	<label for="debug_id"><?php echo __("Enable extended logging");?></label>
-	</td>
-	<td class="prefValue">
-		<input dojoType="dijit.form.CheckBox" type="checkbox" name="debug" id="debug_id"
-			<?php print $debugChecked;?>>
-	</td>
-	</tr>
-</table>
-<p><button dojoType="dijit.form.Button" type="submit"><?php print __("Save");?></button></p>
-</form>
+	<table width='30%' style="border:3px ridge grey;"><tr>
+		<td width="95%">
+		<label for="debug_id"><?php echo __("Enable extended logging");?></label>
+		</td>
+		<td class="prefValue">
+			<input dojoType="dijit.form.CheckBox" type="checkbox" name="debug" id="debug_id"
+				<?php print $debugChecked;?>>
+		</td>
+		</tr>
+	</table>
+	<p><button dojoType="dijit.form.Button" type="submit"><?php print __("Save");?></button></p>
+	</form>
+	</div>
+
+	<div data-dojo-type="dijit/layout/ContentPane" title="<?php print __('Show Diff'); ?>">
+	<form dojoType="dijit.form.Form">
+		<script type="dojo/method" event="onSubmit" args="evt">
+			evt.preventDefault();
+			if (this.validate()) {
+				var values = this.getValues();
+				values.json_conf = dijit.byId("feedcleaner_settings").value.json_conf;
+				values.op = "pluginhandler";
+				values.method = "preview";
+				values.plugin = "<?php print strtolower(get_class());?>";
+				new Ajax.Request('backend.php', {
+					parameters: dojo.objectToQuery(values),
+					onComplete: function(transport) {
+						if (transport.responseText.indexOf('error:')==0) notify_error(transport.responseText);
+						else {
+							var preview = document.getElementById("preview");
+							preview.innerHTML = transport.responseText;//textContent
+						}
+					}
+				});
+				//this.reset();
+			}
+		</script>
+		URL: <input dojoType="dijit.form.TextBox" name="url"> <button dojoType="dijit.form.Button" type="submit"><?php print __("Preview"); ?></button>
+	</form>
+	<div id="preview" style="border:2px solid grey; min-height:2cm; max-width: 30cm;"><?php print __("Preview"); ?></div>
+	</div>
+</div>
 
 		<?php
 	}
@@ -333,5 +318,82 @@ class ff_FeedCleaner extends Plugin
 		echo __("Configuration saved.");
 	}
 
+	// diff stuff
+
+	static function format_diff_array_html($ar) {
+		$func = function($var) {return htmlspecialchars($var, ENT_QUOTES, "UTF-8");};//ENT_XML1 would be better?
+		$diff = array_map($func, $ar);
+
+		return implode("<br/>", $diff);
+	}
+
+	function preview()
+	{
+		$url = $_POST['url'];
+		$conf = $_POST['json_conf'];
+
+		try {
+			$diff = self::compute_diff($url, $conf);
+			print self::format_diff_array_html($diff);
+		} catch (Exception $e) {
+			print "error: " . $e->getMessage();
+		}
+	}
+
+	static function format_save_tmp($data, $format=True) {
+		if($format) {
+			$xml = new DOMDocument();
+			$xml->preserveWhiteSpace = false;
+			$xml->formatOutput = true;
+			$res = $xml->loadXML($data);
+		}
+
+		$filename = tempnam(sys_get_temp_dir(), '');
+		if($format && $res) $outXML = $xml->save($filename);
+		else {
+			$handle = fopen($filename, "w");
+			fwrite($handle, $data);
+			fclose($handle);
+		}
+
+		return array($filename, $format && $res);
+	}
+
+	const diff_cmd = 'diff -U 0 -s -w ';
+
+	static function compute_diff($url, $json_data) {
+		$con = fetch_file_contents($url);
+		if(!$con) throw new Exception("Couldn't fetch $url");
+
+		$res = self::hook1($con, $url, $json_data);
+		if($res) list($feed_data, $config_data) = $res;
+		else throw new Exception("Invalid json");
+
+		$rss = new FeedParser($feed_data);
+		$rss->init();
+		if(!$rss->error()) {
+			self::hook2($rss, $config_data);
+
+			$ref = new ReflectionClass('FeedParser');
+			$p_doc = $ref->getProperty('doc');
+			$p_doc->setAccessible(true);
+
+			$doc = $p_doc->getValue($rss);
+			$new_feed_data = $doc->saveXML();
+
+			list($old_file, $xml) = self::format_save_tmp($con);
+			list($new_file, $xml) = self::format_save_tmp($new_feed_data, $xml);
+			$diff = array();
+			$res = 2;
+			exec(self::diff_cmd . " $old_file $new_file", $diff, $res);
+			unlink($old_file);
+			unlink($new_file);
+
+			//var_dump($diff);
+			if($res <= 1) {
+				return $diff;
+			} else throw new Exception("Error computing diff");
+		} else throw new Exception("XML errors: {$rss->error()}");
+	}
 }
 ?>
