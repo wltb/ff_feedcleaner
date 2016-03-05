@@ -114,6 +114,54 @@ class ff_FeedCleaner extends Plugin
 		}
 	}
 
+	function format_save_tmp($data) {
+		$xml = new DOMDocument();
+		$xml->preserveWhiteSpace = false;
+		$xml->formatOutput = true;
+		$xml->loadXML($data);
+
+		$filename = tempnam(sys_get_temp_dir(), '');
+		$outXML = $xml->save($filename);
+
+		return $filename;
+	}
+
+	const diff_cmd = 'diff -U 0 -s ';
+
+	static function compute_diff($url, $json_data) {
+		$con = fetch_file_contents($url);
+		if(!$con) return;
+
+		$res = self::hook1($con, $url, $json_data);
+		if($res) list($feed_data, $config_data) = $res;
+		else return;
+
+		//if(!$config_data) return;
+
+		$rss = new FeedParser($feed_data);
+		$rss->init();
+		if(!$rss->error()) {
+			self::hook2($rss, $config_data);
+
+			$ref = new ReflectionClass('FeedParser');
+			$p_doc = $ref->getProperty('doc');
+			$p_doc->setAccessible(true);
+
+			$doc = $p_doc->getValue($rss);
+			$new_feed_data = $doc->saveXML();
+
+			$old_file = self::format_save_tmp($feed_data);
+			$new_file = self::format_save_tmp($new_feed_data);
+			$diff = '';
+			$res = system(self::diff_cmd . " $old_file $new_file", $diff);
+			unlink($old_file);
+			unlink($new_file);
+			if($res !== False) {
+				print $diff;
+			}
+		}
+	}
+
 	static function enc_utf8($feed_data, $config, $debug) {
 		$decl_regex =
 			'/^(<\?xml
