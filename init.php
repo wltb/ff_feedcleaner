@@ -39,20 +39,20 @@ class ff_FeedCleaner extends Plugin
 	{
 		$json_conf = $this->host->get($this, 'json_conf');
 		$debug_conf = sql_bool_to_bool($this->host->get($this, 'debug', bool_to_sql_bool(FALSE)));
-		$this->debug = $debug_conf || $this->host->get_debug();
+		$this->debug = $debug_conf; // || $this->host->get_debug();
 
-		$res = self::hook1($feed_data, $fetch_url, $json_conf, $this->debug);
-		if($res) list($feed_data, $this->feed_parsed) = $res;
+		try {
+			list($feed_data, $this->feed_parsed) = self::hook1($feed_data, $fetch_url, $json_conf, $this->debug);
+		} catch (Exception $e) {
+			user_error($e->getMessage(), E_USER_WARNING);
+		}
 
 		return $feed_data;
 	}
 
 	static function hook1($feed_data, $fetch_url, $json_conf, $debug=False) {
 		$data = json_decode($json_conf, true);
-		if (!is_array($data)) {
-			user_error('No or malformed configuration stored', E_USER_WARNING);
-			return;
-		}
+		if (!$data || !is_array($data)) throw new Exception('No or malformed configuration stored');
 
 		$later = array();
 		foreach($data as $config) {
@@ -321,6 +321,9 @@ class ff_FeedCleaner extends Plugin
 	// diff stuff
 
 	static function format_diff_array_html($ar) {
+		// TODO should make sure that everything is indeed utf-8.
+		// This may be not the case if below, the feed data is not loaded into a xml doc.
+		// (and not even then?)
 		$func = function($var) {return htmlspecialchars($var, ENT_QUOTES, "UTF-8");};//ENT_XML1 would be better?
 		$diff = array_map($func, $ar);
 
@@ -332,6 +335,7 @@ class ff_FeedCleaner extends Plugin
 		$url = $_POST['url'];
 		$conf = $_POST['json_conf'];
 
+		// TODO The output should be better structured, the check with 'error:' is a bit clumsy
 		try {
 			$diff = self::compute_diff($url, $conf);
 			print self::format_diff_array_html($diff);
@@ -362,12 +366,16 @@ class ff_FeedCleaner extends Plugin
 	const diff_cmd = 'diff -U 0 -s -w ';
 
 	static function compute_diff($url, $json_data) {
+		//TODO maybe use a library for computing the diff,
+		// see http://stackoverflow.com/questions/321294/ or https://github.com/chrisboulton/php-diff
 		$con = fetch_file_contents($url);
 		if(!$con) throw new Exception("Couldn't fetch $url");
 
-		$res = self::hook1($con, $url, $json_data);
-		if($res) list($feed_data, $config_data) = $res;
-		else throw new Exception("Invalid json");
+		try {
+			list($feed_data, $config_data) = self::hook1($con, $url, $json_data);
+		} catch (Exception $e) {
+			throw $e;
+		}
 
 		$rss = new FeedParser($feed_data);
 		$rss->init();
