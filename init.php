@@ -73,6 +73,7 @@ class ff_FeedCleaner extends Plugin
 						$feed_data = self::apply_regex($feed_data, $config, $debug);
 						break;
 					case "xpath_regex":
+					case "link_regex":
 						$later [] = $config;
 						break;
 					case "utf-8":
@@ -110,6 +111,32 @@ class ff_FeedCleaner extends Plugin
 			case "xpath_regex":
 				self::apply_xpath_regex($xpath, $config, $debug);
 				break;
+			case "link_regex":
+				self::link_regex($rss, $config, $debug);
+				break;
+			}
+		}
+	}
+
+	static function link_regex($rss, $config, $debug) {
+		static $p_elem;
+		if(!$p_elem) {
+			$ref = new ReflectionClass('FeedItem_Common');
+			$p_elem = $ref->getProperty('elem');
+			$p_elem->setAccessible(true);
+		}
+
+		foreach($rss->get_items() as $item_caps) {
+			$url = $item_caps->get_link();
+			$new_url = self::apply_regex($url, $config, $debug);
+			if($new_url !== $url) {
+				$item = $p_elem->getValue($item_caps);
+				$link = $item->ownerDocument->createElementNS("http://www.w3.org/2005/Atom", 'link');
+				$link->setAttribute('href', $new_url);
+				$item->insertBefore($link, $item->firstChild);
+				if($new_url !== $item_caps->get_link())
+					user_error("$new_url wasn't set for " . json_encode($config)
+						. ". File an issue please.");
 			}
 		}
 	}
