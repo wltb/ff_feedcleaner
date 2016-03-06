@@ -8,12 +8,12 @@
 	*	[Type xpath\_regex](#type-xpath\_regex)
 		*   [Namespaces](#namespaces)
 	*	[Examples](#examples)
+	*	[Type link\_regex](#type-link\_regex)
 	*	[Type utf-8](#type-utf-8)
 *	[Extended Logging](#extended-logging)
-*	[Automatic feed correction](#automatic-feed-correction)
 
 ## Introduction
-This is a plugin for [Tiny Tiny RSS](https://github.com/gothfox/Tiny-Tiny-RSS). It allows to modify the content of feeds before Tiny Tiny RSS parses them.
+This is a plugin for [Tiny Tiny RSS](https://tt-rss.org/). It allows to modify the content of feeds before Tiny Tiny RSS parses them.
 Currently, the emphasis is on applying [regular expressions](http://www.php.net/manual/en/book.pcre.php) to the feed data.
 The plugin structure is very much inspired by the excellent [af_feedmod](https://github.com/mbirth/ttrss_plugin-af_feedmod) plugin.
 
@@ -91,7 +91,7 @@ Their values are used to manipulate the feed data with the [preg_replace functio
 The semantic of their values is explained on the linked page, in particular, *pattern* is a regular expression.
 
 ###Type *xpath_regex*
-This type is useful because it allows a more careful selection of the text that should be altered with a [XPath](http://www.w3schools.com/xpath/default.asp) expression. The XPath must be specified with the key *xpath*.
+This type is useful because it allows a more careful selection of the text that should be altered with a [XPath](http://www.w3schools.com/xsl/xpath_intro.asp) expression. The XPath must be specified with the key *xpath*.
 The other keys that are needed are *pattern* and *replacement*. Their meaning is the same as in the *regex* type.
 
 With this type, some subtleties have to be regarded.
@@ -133,6 +133,8 @@ and the *pre* entries are the prefixes to be used in the path queries.
 
 If the *namespaces* key is present, the automatic namespace detection is disabled.
 
+###Type link\_regex
+
 ###Examples
 We explain what the entries in the given example configuration do.
 
@@ -166,16 +168,8 @@ In the NY Times objects, we also can see the different ways of inserting a "&amp
 This type converts the feed data encoding to UTF-8.
 
 ##Extended Logging
-Extended logging is enabled by setting the corresponding checkbox in the preferences tab, or by enabling global extended logging in Tiny Tiny RSS.
-Regardless of these two settings, errors are always logged.
+Extended logging is enabled by setting the corresponding checkbox in the preferences tab.
+Regardless of this setting, errors are always logged.
 The log entries go into what you have defined in LOG_DESTINATION in Tiny Tiny RSSes config.php.
 
 If you enable extended logging, the activity of the plugin will be reported in great detail. In particular, if you see no output at all, none of your objects in the configuration matched any of your subscribed feeds.
-
-##Automatic feed correction
-If enabled, this option tries to automatically correct faulty feed data.
-It will apply the corrections that Tiny Tiny RSSes FeedParser class does.
-Changes to the feed data will *not* be logged at the moment.
-
-It is recommended to enable this option if a type like *xpath_regex* is in use.
-
