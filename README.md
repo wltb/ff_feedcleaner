@@ -7,15 +7,14 @@
 	*	[Type regex](#type-regex)
 	*	[Type xpath\_regex](#type-xpath\_regex)
 		*   [Namespaces](#namespaces)
-	*	[Examples](#examples)
 	*	[Type link\_regex](#type-link\_regex)
+	*	[Examples](#examples)
 	*	[Type utf-8](#type-utf-8)
 *	[Extended Logging](#extended-logging)
 
 ## Introduction
 This is a plugin for [Tiny Tiny RSS](https://tt-rss.org/). It allows to modify the content of feeds before Tiny Tiny RSS parses them.
 Currently, the emphasis is on applying [regular expressions](http://www.php.net/manual/en/book.pcre.php) to the feed data.
-The plugin structure is very much inspired by the excellent [af_feedmod](https://github.com/mbirth/ttrss_plugin-af_feedmod) plugin.
 
 The Tiny Tiny RSS version must be 1.8 or later.
 
@@ -33,13 +32,9 @@ Note that the directory containing *init.php* **must** be named *ff_feedcleaner*
 After that, the plugin must be enabled in the preferences of Tiny Tiny RSS.
 
 ## Configuration
-In the preferences, you'll find a new tab called *FeedCleaner* which contains one large text field which is used to enter/modify the configuration data,
-and two checkboxes to turn
-
-* [extended logging](https://github.com/wltb/ff_feedcleaner#extended-logging)
-* [automatic feed correction](https://github.com/wltb/ff_feedcleaner#automatic-feed-correction)
-
-on and off.
+In the preferences, you'll find a new tab called *FeedCleaner* which contains two panes. The pane *Preferences* is opened by default, and contains a large text field which is used to enter/modify the configuration data,
+and a checkbox to turn [extended logging](https://github.com/wltb/ff_feedcleaner#extended-logging) on and off.
+The other pane *Show Diff* can be used to preview the results on the manipulation and is described further below.
 
 Basically, the configuration data consists of an unnamed [JSON](http://json.org/) array that contains some unnamed JSON objects. Use the **Save** button to store it.
 
@@ -66,6 +61,12 @@ An example configuration looks like this:
 		"xpath": "//item/atom:link/@href|//item/link",
 		"pattern": "/$/",
 		"replacement": "&pagewanted=all"
+	},
+	{
+		"URL": "faz.net",
+		"type": "link_regex",
+		"pattern": "#$#",
+		"replacement": "?printPagedArticle=true"
 	}
 ]
 ```
@@ -133,16 +134,23 @@ and the *pre* entries are the prefixes to be used in the path queries.
 
 If the *namespaces* key is present, the automatic namespace detection is disabled.
 
+**Important**:
+Since this plugin uses the DOMXPath object that is constructed by the FeedParser class of Tiny Tiny RSS, there are already some registered namespaces, and you should **not** override these prefixes. Check the definition of the FeedParser class for details. 
+
 ###Type link\_regex
+This type allows an easy manipulation of the links that Tiny Tiny RSS extracts for the feed items.
+The only keys needed beside the obligatory ones are *pattern* and *replacement*, which are applied to the links, and the results are stored so that Tiny Tiny RSS will choose them as the items link.
+
+A warning: This type very much relies on information about Tiny Tiny RSS'es implementation details, and may break if they change. It is however highly unlikely that a change will make this type of manipulation impossible (or that there will be any change at all – the relevant code has been stable for nearly two years now), and I will try my best to quickly adapt to any change.
 
 ###Examples
 We explain what the entries in the given example configuration do.
 
 In the entry with the URL_re key, for any feed whose URL contains *http://www.iswintercoming.com/feed.php* or *http://prospector.freeforums.org/feed.php*, expressions like *sid=a7595fe6a719361152bb96f8a0bd48b5* (a *sid=* followed by 32 hexadecimal digits) are removed from the feed data.
 
-The other two entries are useful in conjunction with [af_feedmod](https://github.com/mbirth/ttrss_plugin-af_feedmod).
+The other three entries are useful in conjunction with [af_feedmod](https://github.com/mbirth/ttrss_plugin-af_feedmod).
 They amend the article links such that they point to a web page with the full article content, so that it can be fetched instead of just a segment.
-It is instructive to compare the two objects with their *regex* cousins that were featured in an earlier version of this document.
+It is instructive to compare the first two objects with their *regex* cousins that were featured in an earlier version of this document.
 
 ```json
 [
@@ -164,8 +172,13 @@ It is instructive to compare the two objects with their *regex* cousins that wer
 While these do (roughly) the same, the regular expressions for the *xpath_regex* objects are clearly more elegant, at the expense of finding a nice XPath, of course.
 In the NY Times objects, we also can see the different ways of inserting a "&amp;amp;" into the feed. In the *regex* case, this has to be done literally, with the *xpath_regex*, there must be a "&" in the *replacement* value.
 
+For the object modifying faz.net feeds, we see that the *link_regex* type works without the need for finding the right xpath, and so combines the best features of the other two types.
+Since this type also uses DOM functions, the same rules for insertion of entities as for the *xpath_regex* type apply. 
+
 ###Type *utf-8*
 This type converts the feed data encoding to UTF-8.
+
+##Preview of modifications
 
 ##Extended Logging
 Extended logging is enabled by setting the corresponding checkbox in the preferences tab.
