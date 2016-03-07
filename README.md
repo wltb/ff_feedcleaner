@@ -10,6 +10,7 @@
 	*	[Type link\_regex](#type-link\_regex)
 	*	[Examples](#examples)
 	*	[Type utf-8](#type-utf-8)
+	*	[Preview of modifications](#preview-of-modifications)
 *	[Extended Logging](#extended-logging)
 
 ## Introduction
@@ -34,7 +35,7 @@ After that, the plugin must be enabled in the preferences of Tiny Tiny RSS.
 ## Configuration
 In the preferences, you'll find a new tab called *FeedCleaner* which contains two panes. The pane *Preferences* is opened by default, and contains a large text field which is used to enter/modify the configuration data,
 and a checkbox to turn [extended logging](https://github.com/wltb/ff_feedcleaner#extended-logging) on and off.
-The other pane *Show Diff* can be used to preview the results on the manipulation and is described further below.
+The other pane *Show Diff* can be used to preview the results on the manipulation and is described [further below](#preview-of-modifications).
 
 Basically, the configuration data consists of an unnamed [JSON](http://json.org/) array that contains some unnamed JSON objects. Use the **Save** button to store it.
 
@@ -179,6 +180,17 @@ Since this type also uses DOM functions, the same rules for insertion of entitie
 This type converts the feed data encoding to UTF-8.
 
 ##Preview of modifications
+The other pane titled *Show Diff* can be used to preview the changes made by this plugin.
+Simply enter the feed URL in the text box at the very top and click the button.
+A diff of the before and after will show up in the larger text box. Here is a screenshot for the faz.net modification:
+
+![Show Diff](https://cloud.githubusercontent.com/assets/4541137/13574263/abcb7b7c-e483-11e5-877e-5e73e63c8f72.jpg)
+
+This feature is still a little rough around the edges, e.g. there may be problems for feeds with encoding other then utf-8, or when the orginal feed can not be parsed, but the modified one can.
+
+Some technical details: Currently, the unix diff CLI tool is used, so on machines without it, this will not work.
+The diff command used is defined in the class constant *diff_cmd* and can be changed for more context etc.
+The preview does not load any other plugins, so the actual feed parsed by Tiny Tiny RSS may have other modifications besides the one shown in the preview.
 
 ##Extended Logging
 Extended logging is enabled by setting the corresponding checkbox in the preferences tab.
