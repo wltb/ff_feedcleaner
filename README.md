@@ -3,6 +3,7 @@
 
 *	[Introduction](#introduction)
 *	[Installation](#installation)
+	*	[Updating](#updating)
 *	[Configuration](#configuration)
 	*	[Type regex](#type-regex)
 	*	[Type xpath\_regex](#type-xpath\_regex)
@@ -10,7 +11,7 @@
 	*	[Type link\_regex](#type-link\_regex)
 	*	[Examples](#examples)
 	*	[Type utf-8](#type-utf-8)
-	*	[Preview of modifications](#preview-of-modifications)
+*	[Preview of modifications](#preview-of-modifications)
 *	[Extended Logging](#extended-logging)
 
 ## Introduction
@@ -23,14 +24,20 @@ The Tiny Tiny RSS version must be 1.8 or later.
 This should be done on the command line
 
 ```sh
-$ cd /var/www/ttrss/plugins
+$ cd /var/www/ttrss/plugins.local
 $ git clone https://github.com/wltb/ff_feedcleaner
 ```
 
-Alternatively, you can download the zip archive and unzip it into the *plugins* subdirectory of your Tiny Tiny RSS installation.
+Alternatively, you can download the zip archive and unzip it into the *plugins.local* (or *plugins*) subdirectory of your Tiny Tiny RSS installation.
 Note that the directory containing *init.php* **must** be named *ff_feedcleaner*, otherwise Tiny Tiny RSS won't load the plugin, so you may have to rename it after the unzipping.
 
 After that, the plugin must be enabled in the preferences of Tiny Tiny RSS.
+
+### Updating
+
+This is easiest with a git installation, simply use a *git pull*.
+With a zip installation, the old directory must be overwritten with the a fresh download.
+In neither case any stored configurations will be overwritten since these are stored in the database.
 
 ## Configuration
 In the preferences, you'll find a new tab called *FeedCleaner* which contains two panes. The pane *Preferences* is opened by default, and contains a large text field which is used to enter/modify the configuration data,
@@ -87,12 +94,12 @@ It should be noted that the configuration is always UTF-8 encoded.
 This may cause problems if the regular expressions contain non-ASCII characters, and the feed encoding is not UTF-8.
 You may then want to convert the feed encoding beforehand with [type uft-8](https://github.com/wltb/ff_feedcleaner#type-utf-8).
 
-###Type *regex*
+### Type *regex*
 For this type, two additional keys must be specified: *pattern* and *replacement*.
 Their values are used to manipulate the feed data with the [preg_replace function](http://www.php.net/manual/en/function.preg-replace.php).
 The semantic of their values is explained on the linked page, in particular, *pattern* is a regular expression.
 
-###Type *xpath_regex*
+### Type *xpath_regex*
 This type is useful because it allows a more careful selection of the text that should be altered with a [XPath](http://www.w3schools.com/xsl/xpath_intro.asp) expression. The XPath must be specified with the key *xpath*.
 The other keys that are needed are *pattern* and *replacement*. Their meaning is the same as in the *regex* type.
 
@@ -101,7 +108,7 @@ With this type, some subtleties have to be regarded.
 1. When the feed is loaded, all five [predefined entities](http://www.w3.org/TR/REC-xml/#sec-predefined-ent) are converted to their real values. When saving, only *&*, *<*, *>* (and in attributes, also *"*) are converted back to *&amp;amp;*, *&amp;lt;*, *&amp;gt;* (and *&amp;quot;*), respectively.
 2. On all text nodes that are gathered with the XPath, the regular expression with *pattern* and *replacement* is directly applied. For all other node types, the regular expression is applied to all their children that are text nodes.
 
-####Namespaces
+#### Namespaces
 For feeds with default namespaces (e.g. Atom and RDF documents),
 querying with xpaths was possible, but a bit of a pain.
 In order to ease this, support for namespaces was added.
@@ -136,15 +143,15 @@ and the *pre* entries are the prefixes to be used in the path queries.
 If the *namespaces* key is present, the automatic namespace detection is disabled.
 
 **Important**:
-Since this plugin uses the DOMXPath object that is constructed by the FeedParser class of Tiny Tiny RSS, there are already some registered namespaces, and you should **not** override these prefixes. Check the definition of the FeedParser class for details. 
+Since this plugin uses the DOMXPath object that is constructed by the FeedParser class of Tiny Tiny RSS, there are already some registered namespaces, and you should **not** override their prefixes. Check the definition of the FeedParser class for details. 
 
-###Type link\_regex
+### Type link\_regex
 This type allows an easy manipulation of the links that Tiny Tiny RSS extracts for the feed items.
-The only keys needed beside the obligatory ones are *pattern* and *replacement*, which are applied to the links, and the results are stored so that Tiny Tiny RSS will choose them as the items link.
+The only keys needed beside the obligatory ones are *pattern* and *replacement*, which have the same meaning as in the regex case. But here, they are applied to the links only, and the results are stored so that Tiny Tiny RSS will choose them as the items links.
 
-A warning: This type very much relies on information about Tiny Tiny RSS'es implementation details, and may break if they change. It is however highly unlikely that a change will make this type of manipulation impossible (or that there will be any change at all – the relevant code has been stable for nearly two years now), and I will try my best to quickly adapt to any change.
+A warning: This type very much relies on information about Tiny Tiny RSS'es implementation details, and may break if they change. It is however highly unlikely that a change will make this type of manipulation impossible (or that there will be any change at all – the relevant code has been stable for nearly four years now), and I will try my best to quickly adapt to any change.
 
-###Examples
+### Examples
 We explain what the entries in the given example configuration do.
 
 In the entry with the URL_re key, for any feed whose URL contains *http://www.iswintercoming.com/feed.php* or *http://prospector.freeforums.org/feed.php*, expressions like *sid=a7595fe6a719361152bb96f8a0bd48b5* (a *sid=* followed by 32 hexadecimal digits) are removed from the feed data.
@@ -174,27 +181,32 @@ While these do (roughly) the same, the regular expressions for the *xpath_regex*
 In the NY Times objects, we also can see the different ways of inserting a "&amp;amp;" into the feed. In the *regex* case, this has to be done literally, with the *xpath_regex*, there must be a "&" in the *replacement* value.
 
 For the object modifying faz.net feeds, we see that the *link_regex* type works without the need for finding the right xpath, and so combines the best features of the other two types.
-Since this type also uses DOM functions, the same rules for insertion of entities as for the *xpath_regex* type apply. 
+Since this type also uses DOM functions, the same rules for insertion of entities as for the *xpath_regex* type apply.
 
-###Type *utf-8*
+### Type *utf-8*
 This type converts the feed data encoding to UTF-8.
 
-##Preview of modifications
+## Preview of modifications
 The other pane titled *Show Diff* can be used to preview the changes made by this plugin.
 Simply enter the feed URL in the text box at the very top and click the button.
 A diff of the before and after will show up in the larger text box. Here is a screenshot for the faz.net modification:
 
 ![Show Diff](https://cloud.githubusercontent.com/assets/4541137/13574263/abcb7b7c-e483-11e5-877e-5e73e63c8f72.jpg)
 
-This feature is still a little rough around the edges, e.g. there may be problems for feeds with encoding other then utf-8, or when the orginal feed can not be parsed, but the modified one can.
+The config used for the feed modification is *not* the one stored in the DB, but the one displayed under the **Preferences** pane.
+This is useful for trying out new modifications without interfering with the actual fetching, but the text must be valid JSON then.
+
+This feature is still a little rough around the edges, e.g. there may be problems for feeds with encoding other then utf-8, or when the original feed can not be parsed, but the modified one can.
 
 Some technical details: Currently, the unix diff CLI tool is used, so on machines without it, this will not work.
+The right hand side (marked with **+** in the screenshot) is the modified feed, and the left hand side the original one.
 The diff command used is defined in the class constant *diff_cmd* and can be changed for more context etc.
 The preview does not load any other plugins, so the actual feed parsed by Tiny Tiny RSS may have other modifications besides the one shown in the preview.
 
-##Extended Logging
+## Extended Logging
 Extended logging is enabled by setting the corresponding checkbox in the preferences tab.
 Regardless of this setting, errors are always logged.
 The log entries go into what you have defined in LOG_DESTINATION in Tiny Tiny RSSes config.php.
 
 If you enable extended logging, the activity of the plugin will be reported in great detail. In particular, if you see no output at all, none of your objects in the configuration matched any of your subscribed feeds.
+ 
