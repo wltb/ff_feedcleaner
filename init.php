@@ -80,7 +80,7 @@ class ff_FeedCleaner extends Plugin
 						$feed_data = self::enc_utf8($feed_data, $config, $debug);
 						break;
 					default:
-						continue;
+						continue 2;
 				}
 			}
 		}
