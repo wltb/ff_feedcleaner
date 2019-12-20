@@ -15,19 +15,12 @@ class ff_FeedCleaner extends Plugin
 		);
 	}
 
-	function api_version()
-	{
+	function api_version() {
 		return 2;
 	}
 
-	function init($host)
-	{
+	function init($host) {
 		$this->host = $host;
-
-		if (version_compare(VERSION_STATIC, '1.8', '<')){
-			user_error('Hooks not registered. Needs at least version 1.8', E_USER_WARNING);
-			return;
-		}
 
 		$host->add_hook($host::HOOK_PREFS_TABS, $this);
 		$host->add_hook($host::HOOK_FEED_FETCHED, $this);
@@ -80,7 +73,7 @@ class ff_FeedCleaner extends Plugin
 						$feed_data = self::enc_utf8($feed_data, $config, $debug);
 						break;
 					default:
-						continue;
+						continue 2;
 				}
 			}
 		}
@@ -327,7 +320,7 @@ class ff_FeedCleaner extends Plugin
 	</div>
 </div>
 
-		<?php
+<?php
 	}
 
 	function save()
@@ -431,4 +424,4 @@ class ff_FeedCleaner extends Plugin
 		} else throw new Exception("XML errors: {$rss->error()}");
 	}
 }
-?>
+
