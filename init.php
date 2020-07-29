@@ -17,6 +17,7 @@ class ff_FeedCleaner extends Plugin {
 		return 2;
 	}
 
+
 	function init($host) {
 		$this->host = $host;
 
@@ -25,53 +26,69 @@ class ff_FeedCleaner extends Plugin {
 		$host->add_hook($host::HOOK_FEED_PARSED, $this);
 	}
 
+
+	private static function debug($msg, $prio=NULL) {
+		if(! class_exists("Debug")) {
+			trigger_error("Debug class doesn't exist. Why?", E_USER_ERROR);
+			return;
+		}
+		Debug::log($msg, Debug::$LOG_VERBOSE);
+		if(is_int($prio)) trigger_error($msg, $prio);
+	}
+
+
 	//implement fetch hooks
 	function hook_feed_fetched($feed_data, $fetch_url) {
 		$json_conf = $this->host->get($this, 'json_conf');
-		$debug_conf = sql_bool_to_bool($this->host->get($this, 'debug', bool_to_sql_bool(FALSE)));
-		$this->debug = $debug_conf; // || $this->host->get_debug();
 
 		try {
-			list($feed_data, $this->feed_parsed) = self::hook1($feed_data, $fetch_url, $json_conf, $this->debug);
-		} catch (Exception $e) {
-			user_error($e->getMessage(), E_USER_WARNING);
+			list($feed_data, $this->feed_parsed) = self::hook1($feed_data, $fetch_url, $json_conf);
+		} catch (RuntimeException $e) {
+			self::debug($e->getMessage(), E_USER_WARNING);
 		}
 
 		return $feed_data;
 	}
 
-	static function hook1($feed_data, $fetch_url, $json_conf, $debug=False) {
-		$data = json_decode($json_conf, true);
-		if (! $data || ! is_array($data)) throw new Exception('No or malformed configuration stored');
+
+	private static function hook1($feed_data, $fetch_url, $json_conf) {
+		$json_conf = json_decode($json_conf, true);
+		if (! $json_conf || ! is_array($json_conf)) {
+			throw new RuntimeException('No or malformed configuration stored. Possible cause: '. json_last_error_msg());
+		}
 
 		$later = array();
-		foreach($data as $config) {
+		foreach($json_conf as $config) {
 			$test = false;
 
 			if(array_key_exists('URL', $config))
 				$test = (strpos($fetch_url, $config['URL']) !== false);
 			elseif(array_key_exists('URL_re', $config))
 				$test = (preg_match($config['URL_re'], $fetch_url) === 1);
-			else
-				user_error('For ' . json_encode($config) . ': Neither URL nor URL_re key is present', E_USER_WARNING);
+			else {
+				$msg = sprintf("Config '%s': Neither URL nor URL_re key is present", json_encode($config));
+				self::debug($msg, E_USER_WARNING);
+				continue;
+			}
 
-			if( $test ){
-				if($debug)
-					user_error('Modifying ' . $fetch_url . ' with ' . json_encode($config), E_USER_NOTICE);
-				switch (strtolower($config["type"])) {
-					case "regex":
-						$feed_data = self::apply_regex($feed_data, $config, $debug);
-						break;
-					case "xpath_regex":
-					case "link_regex":
-						$later [] = $config;
-						break;
-					case "utf-8":
-						$feed_data = self::enc_utf8($feed_data, $config, $debug);
-						break;
-					default:
-						continue 2;
-				}
+			if( ! $test ) continue;
+
+			$msg = "Modifying '$fetch_url' using " . json_encode($config);
+			switch (strtolower($config["type"])) {
+			case "regex":
+				self::debug($msg);
+				$feed_data = self::apply_regex($feed_data, $config);
+				break;
+			case "xpath_regex":
+			case "link_regex":
+				$later [] = $config;
+				break;
+			case "utf-8":
+				self::debug($msg);
+				$feed_data = self::enc_utf8($feed_data, $config);
+				break;
+			default:
+				continue 2;
 			}
 		}
 
@@ -81,10 +98,11 @@ class ff_FeedCleaner extends Plugin {
 
 	function hook_feed_parsed($rss) {
 		if(! $this->feed_parsed) return;  // TODO rename this !
-		self::hook2($rss, $this->feed_parsed, $this->debug);
+		self::hook2($rss, $this->feed_parsed);
 	}
 
-	static function hook2($rss, $config_data, $debug=False) {
+
+	private static function hook2($rss, $config_data) {
 		static $p_xpath;
 		if(!$p_xpath) { #initialize reflection
 			$ref = new ReflectionClass('FeedParser');
@@ -95,42 +113,55 @@ class ff_FeedCleaner extends Plugin {
 		//$xpath->registerNamespace('rssfake', "http://purl.org/rss/1.0/");
 
 		foreach($config_data as $config) {
-			//var_dump($config);
+			$msg = "Modifying '{$rss->get_link()}' using " . json_encode($config);
 			switch (strtolower($config["type"])) {
 			case "xpath_regex":
-				self::apply_xpath_regex($xpath, $config, $debug);
+				self::debug($msg);
+				self::apply_xpath_regex($xpath, $config);
 				break;
 			case "link_regex":
-				self::link_regex($rss, $config, $debug);
+				self::debug($msg);
+				self::link_regex($rss, $config);
 				break;
 			}
 		}
 	}
 
-	static function link_regex($rss, $config, $debug) {
+
+	private static function link_regex($rss, $config) {
 		static $p_elem;
 		if(!$p_elem) {
 			$ref = new ReflectionClass('FeedItem_Common');
 			$p_elem = $ref->getProperty('elem');
 			$p_elem->setAccessible(true);
 		}
+		//  TODO link may be relative
+		//  rewrite_relative_url($site_url, $item->get_link());
 
+		$counter = 0;
 		foreach($rss->get_items() as $item_caps) {
 			$url = $item_caps->get_link();
-			$new_url = self::apply_regex($url, $config, $debug);
+			$new_url = self::apply_regex($url, $config, True);
 			if($new_url !== $url) {
 				$item = $p_elem->getValue($item_caps);
 				$link = $item->ownerDocument->createElementNS("http://www.w3.org/2005/Atom", 'link');
 				$link->setAttribute('href', $new_url);
 				$item->insertBefore($link, $item->firstChild);
-				if($new_url !== $item_caps->get_link())
-					user_error("$new_url wasn't set for " . json_encode($config)
-						. ". File an issue please.");
+				if($new_url !== $item_caps->get_link()) {
+					self::debug("'$new_url' wasn't set for " . json_encode($config)
+						. ". File an issue please.", E_USER_WARNING);
+				} else {
+					$counter++;
+					#self::debug("Turned '$url' into '$new_url'");  // TODO higher verbosity?
+				}
 			}
 		}
+
+		self::debug("# of modified links: $counter");
 	}
 
-	static function enc_utf8($feed_data, $config, $debug) {
+
+	private static function enc_utf8($feed_data, $config) {
 		$decl_regex =
 			'/^(<\?xml
 				[\t\n\r ]+version[\t\n\r ]*=[\t\n\r ]*["\']1\.[0-9]+["\']
@@ -140,42 +171,37 @@ class ff_FeedCleaner extends Plugin {
 		if (preg_match($decl_regex, $feed_data, $matches) === 1 && strtoupper($matches[2]) != 'UTF-8') {
 			mb_substitute_character("none");
 			$data = mb_convert_encoding($feed_data, 'UTF-8', $matches[2]);
-			if($data !== false)
-			{
+			if($data !== false) {
 				$feed_data = preg_replace($decl_regex, $matches[1] . "UTF-8" . $matches[3], $data);
-				if($debug)
-					user_error('Encoding conversion to UTF-8 was successful', E_USER_NOTICE);
-			}
-			else
-				user_error('For ' . json_encode($config) . ": Couldn't convert the encoding", E_USER_WARNING);
+				self::debug('Encoding conversion to UTF-8 was successful');
+			} else self::debug('For ' . json_encode($config) . ": Couldn't convert the encoding", E_USER_WARNING);
 		}
 		else {
-			if($debug)
-				user_error('No encoding declared or encoding is UTF-8 already', E_USER_NOTICE);
+			self::debug('No encoding declared or encoding is UTF-8 already');
 		}
 
 		return $feed_data;
 	}
 
-	static function apply_regex($feed_data, $config, $debug=false) {
+
+	private static function apply_regex($feed_data, $config, $silent=False) {
 		$pat = $config["pattern"];
 		$rep = $config["replacement"];
 
 		$feed_data_mod = preg_replace($pat, $rep, $feed_data, -1, $count);
 
-		if($feed_data_mod !== NULL)
+		if($feed_data_mod !== NULL) {
 			$feed_data = $feed_data_mod;
-		else {
-			$count = 0;
+			if(! $silent) self::debug("Applied (pattern '$pat', replacement '$rep') $count times");
+		} else {
+			self::debug("Error applying RegEx (pattern '$pat', replacement '$rep')", E_USER_WARNING);
 		}
-
-		if($debug)
-			user_error('Applied (pattern "' . $pat . '", replacement "' . $rep . '") ' . $count . ' times', E_USER_NOTICE);
 
 		return $feed_data;
 	}
 
-	static function apply_xpath_regex($xpath, $config, $debug=false) {
+
+	private static function apply_xpath_regex($xpath, $config) {
 		if(isset($config['namespaces']) && is_array($config['namespaces']))
 			foreach($config['namespaces'] as $prefix => $URI)
 				$xpath->registerNamespace($prefix, $URI);
@@ -198,8 +224,7 @@ class ff_FeedCleaner extends Plugin {
 		$pat = $config["pattern"];
 		$rep = $config["replacement"];
 
-		if($debug)
-			user_error('Found ' . $node_list->length . ' nodes with XPath "' . $config['xpath'] . '"', E_USER_NOTICE);
+		self::debug("Found {$node_list->length} nodes with XPath '{$config['xpath']}'");
 
 		$preg_rep_func = function($node) use ($pat, $rep, &$counter) {
 			if( $node->nodeType == XML_TEXT_NODE) {
@@ -207,6 +232,8 @@ class ff_FeedCleaner extends Plugin {
 				if($text_mod !== NULL) {
 					$node->nodeValue = $text_mod;
 					$counter += $count;
+				} else {
+					self::debug("Error applying (pattern '$pat', replacement '$rep') to '{$node->textContent}'", E_USER_WARNING);
 				}
 			}
 		};
@@ -216,13 +243,12 @@ class ff_FeedCleaner extends Plugin {
 			if($node->hasChildNodes())
 				// This also works for DOMAttributes because apparently,
 				// their nodeValue is stored in a TextNode child.
-				foreach($node->childNodes as $child)
-					$preg_rep_func($child);
+				foreach($node->childNodes as $child) $preg_rep_func($child);
 		}
 
-		if($debug)
-			user_error('Applied (pattern "' . $pat . '", replacement "' . $rep . '") ' . $counter . ' times', E_USER_NOTICE);
+		self::debug("Applied (pattern '$pat', replacement '$rep')  $counter times");
 	}
+
 
 	//gui hook stuff
 	function hook_prefs_tabs($args)
@@ -231,6 +257,7 @@ class ff_FeedCleaner extends Plugin {
 			href="backend.php?op=pluginhandler&plugin=' . strtolower(get_class()) . '&method=index"
 			title="' . __('FeedCleaner') . '"></div>';
 	}
+
 
 	function index() {
 		$pluginhost = PluginHost::getInstance();
@@ -317,6 +344,7 @@ class ff_FeedCleaner extends Plugin {
 <?php
 	}
 
+
 	function save() {
 		$json_conf = $_POST['json_conf'];
 
@@ -351,7 +379,7 @@ class ff_FeedCleaner extends Plugin {
 		try {
 			$diff = self::compute_diff($url, $conf);
 			print self::format_diff_array_html($diff);
-		} catch (Exception $e) {
+		} catch (RuntimeException $e) {
 			print "error: " . $e->getMessage();
 		}
 	}
@@ -379,41 +407,39 @@ class ff_FeedCleaner extends Plugin {
 
 	static function compute_diff($url, $json_data) {
 		//TODO maybe use a library for computing the diff,
-		// see http://stackoverflow.com/questions/321294/ or https://github.com/chrisboulton/php-diff
+		/* see http://stackoverflow.com/questions/321294/ or https://github.com/chrisboulton/php-diff
+		or https://github.com/sebastianbergmann/diff
+		*/
 		$con = fetch_file_contents($url);
-		if(!$con) throw new Exception("Couldn't fetch $url");
+		if(!$con) throw new RuntimeException("Couldn't fetch $url");
 
-		try {
-			list($feed_data, $config_data) = self::hook1($con, $url, $json_data);
-		} catch (Exception $e) {
-			throw $e;
-		}
+		// could throw Exception
+		list($feed_data, $config_data) = self::hook1($con, $url, $json_data);
 
 		$rss = new FeedParser($feed_data);
 		$rss->init();
-		if(!$rss->error()) {
-			self::hook2($rss, $config_data);
 
-			$ref = new ReflectionClass('FeedParser');
-			$p_doc = $ref->getProperty('doc');
-			$p_doc->setAccessible(true);
+		if($rss->error()) throw new RuntimeException("XML errors: {$rss->error()}");
 
-			$doc = $p_doc->getValue($rss);
-			$new_feed_data = $doc->saveXML();
+		self::hook2($rss, $config_data);
 
-			list($old_file, $xml) = self::format_save_tmp($con);
-			list($new_file, $xml) = self::format_save_tmp($new_feed_data, $xml);
-			$diff = array();
-			$res = 2;
-			exec(self::diff_cmd . " $old_file $new_file", $diff, $res);
-			unlink($old_file);
-			unlink($new_file);
+		$ref = new ReflectionClass('FeedParser');
+		$p_doc = $ref->getProperty('doc');
+		$p_doc->setAccessible(true);
 
-			//var_dump($diff);
-			if($res <= 1) {
-				return $diff;
-			} else throw new Exception("Error computing diff");
-		} else throw new Exception("XML errors: {$rss->error()}");
+		$doc = $p_doc->getValue($rss);
+		$new_feed_data = $doc->saveXML();
+
+		list($old_file, $xml) = self::format_save_tmp($con);
+		list($new_file, $xml) = self::format_save_tmp($new_feed_data, $xml);
+		$diff = array();
+		$res = 2;
+		exec(self::diff_cmd . " $old_file $new_file", $diff, $res);
+		unlink($old_file);
+		unlink($new_file);
+
+		//var_dump($diff);
+		if($res <= 1) return $diff;
+		else throw new RuntimeException("Error computing diff");
 	}
 }
-
