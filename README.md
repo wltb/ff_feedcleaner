@@ -1,4 +1,4 @@
-#ff_FeedCleaner
+# Tiny Tiny RSS plugin ff_feedcleaner
 ## ToC
 
 *	[Introduction](#introduction)

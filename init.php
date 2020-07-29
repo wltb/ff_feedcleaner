@@ -1,12 +1,10 @@
 <?php
 
-class ff_FeedCleaner extends Plugin
-{
+class ff_FeedCleaner extends Plugin {
 	private $host;
 	private $debug;
 
-	function about()
-	{
+	function about() {
 		return array(
 			0.9, // version
 			'Applies regular expressions to a feed', // description
@@ -28,8 +26,7 @@ class ff_FeedCleaner extends Plugin
 	}
 
 	//implement fetch hooks
-	function hook_feed_fetched($feed_data, $fetch_url)
-	{
+	function hook_feed_fetched($feed_data, $fetch_url) {
 		$json_conf = $this->host->get($this, 'json_conf');
 		$debug_conf = sql_bool_to_bool($this->host->get($this, 'debug', bool_to_sql_bool(FALSE)));
 		$this->debug = $debug_conf; // || $this->host->get_debug();
@@ -45,7 +42,7 @@ class ff_FeedCleaner extends Plugin
 
 	static function hook1($feed_data, $fetch_url, $json_conf, $debug=False) {
 		$data = json_decode($json_conf, true);
-		if (!$data || !is_array($data)) throw new Exception('No or malformed configuration stored');
+		if (! $data || ! is_array($data)) throw new Exception('No or malformed configuration stored');
 
 		$later = array();
 		foreach($data as $config) {
@@ -83,8 +80,7 @@ class ff_FeedCleaner extends Plugin
 
 
 	function hook_feed_parsed($rss) {
-		if(!$this->feed_parsed)
-			return;
+		if(! $this->feed_parsed) return;  // TODO rename this !
 		self::hook2($rss, $this->feed_parsed, $this->debug);
 	}
 
@@ -161,8 +157,7 @@ class ff_FeedCleaner extends Plugin
 		return $feed_data;
 	}
 
-	static function apply_regex($feed_data, $config, $debug=false)
-	{
+	static function apply_regex($feed_data, $config, $debug=false) {
 		$pat = $config["pattern"];
 		$rep = $config["replacement"];
 
@@ -237,8 +232,7 @@ class ff_FeedCleaner extends Plugin
 			title="' . __('FeedCleaner') . '"></div>';
 	}
 
-	function index()
-	{
+	function index() {
 		$pluginhost = PluginHost::getInstance();
 		$json_conf = $pluginhost->get($this, 'json_conf');
 
@@ -264,8 +258,8 @@ class ff_FeedCleaner extends Plugin
 			new Ajax.Request('backend.php', {
 				parameters: dojo.objectToQuery(values),
 				onComplete: function(transport) {
-					if (transport.responseText.indexOf('error')>=0) notify_error(transport.responseText);
-					else notify_info(transport.responseText);
+					if (transport.responseText.indexOf('error: ') == 0) Notify.error(transport.responseText);
+					else Notify.info(transport.responseText);
 				}
 			});
 			//this.reset();
@@ -304,7 +298,7 @@ class ff_FeedCleaner extends Plugin
 				new Ajax.Request('backend.php', {
 					parameters: dojo.objectToQuery(values),
 					onComplete: function(transport) {
-						if (transport.responseText.indexOf('error:')==0) notify_error(transport.responseText);
+						if (transport.responseText.indexOf('error: ')==0) Notify.error(transport.responseText);
 						else {
 							var preview = document.getElementById("preview");
 							preview.innerHTML = transport.responseText;//textContent
@@ -323,8 +317,7 @@ class ff_FeedCleaner extends Plugin
 <?php
 	}
 
-	function save()
-	{
+	function save() {
 		$json_conf = $_POST['json_conf'];
 
 		if (is_null(json_decode($json_conf))) {
@@ -350,8 +343,7 @@ class ff_FeedCleaner extends Plugin
 		return implode("<br/>", $diff);
 	}
 
-	function preview()
-	{
+	function preview() {
 		$url = $_POST['url'];
 		$conf = $_POST['json_conf'];
 
