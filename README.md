@@ -203,4 +203,6 @@ The preview does not load any other plugins, so the actual feed parsed by Tiny T
 
 ## Logging to the feed debugger
 Changes applied to a feed are logged to Tiny Tiny RSS'es feed debugger, which can be accessed by a right click on the feed in the main UI, or by pressing f-D while having the feed selected. Additionally, encountered errors will be logged to the default log destination as *E\_USER_WARNING*s.
- 
+
+
+The log messages are escaped with [htmlspecialchars](https://www.php.net/manual/en/function.htmlspecialchars.php) to prepare them for html output (which is used by the feed debugger or the built-in System Log). For other log destinations, e.g. syslog or a web server log, the messages may look a bit strange then, but this shouldn't happen too often anyway.

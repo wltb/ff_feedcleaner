@@ -31,12 +31,20 @@ class ff_FeedCleaner extends Plugin {
 	}
 
 
+	protected static function escape($msg) {
+		return htmlspecialchars($msg, ENT_NOQUOTES);
+	}
+
+
 	private static function debug($msg, $prio=NULL) {
 		if(! class_exists("Debug")) {
 			trigger_error("Debug class doesn't exist. Why?", E_USER_ERROR);
 			return;
 		}
+		$msg = static::escape($msg);
+
 		Debug::log($msg, Debug::$LOG_VERBOSE);
+		// TODO maybe try to detect the log destination to choose the necessary escaping?
 		if(is_int($prio)) trigger_error($msg, $prio);
 	}
 
