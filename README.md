@@ -12,13 +12,11 @@
 	*	[Examples](#examples)
 	*	[Type utf-8](#type-utf-8)
 *	[Preview of modifications](#preview-of-modifications)
-*	[Extended Logging](#extended-logging)
+*	[Logging to the feed debugger](#extended-logging)
 
 ## Introduction
 This is a plugin for [Tiny Tiny RSS](https://tt-rss.org/). It allows to modify the content of feeds before Tiny Tiny RSS parses them.
 Currently, the emphasis is on applying [regular expressions](http://www.php.net/manual/en/book.pcre.php) to the feed data.
-
-The Tiny Tiny RSS version must be 1.8 or later.
 
 ## Installation
 This should be done on the command line
@@ -203,10 +201,6 @@ The right hand side (marked with **+** in the screenshot) is the modified feed, 
 The diff command used is defined in the class constant *diff_cmd* and can be changed for more context etc.
 The preview does not load any other plugins, so the actual feed parsed by Tiny Tiny RSS may have other modifications besides the one shown in the preview.
 
-## Extended Logging
-Extended logging is enabled by setting the corresponding checkbox in the preferences tab.
-Regardless of this setting, errors are always logged.
-The log entries go into what you have defined in LOG_DESTINATION in Tiny Tiny RSSes config.php.
-
-If you enable extended logging, the activity of the plugin will be reported in great detail. In particular, if you see no output at all, none of your objects in the configuration matched any of your subscribed feeds.
+## Logging to the feed debugger
+Changes applied to a feed are logged to Tiny Tiny RSS'es feed debugger, which can be accessed by a right click on the feed in the main UI, or by pressing f-D while having the feed selected. Additionally, encountered errors will be logged to the default log destination as *E\_USER_WARNING*s.
  

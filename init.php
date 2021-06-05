@@ -263,13 +263,6 @@ class ff_FeedCleaner extends Plugin {
 		$pluginhost = PluginHost::getInstance();
 		$json_conf = $pluginhost->get($this, 'json_conf');
 
-		$debug = sql_bool_to_bool($this->host->get($this, "debug", bool_to_sql_bool(FALSE)));
-		if ($debug) {
-			$debugChecked = "checked=\"1\"";
-		} else {
-			$debugChecked = "";
-		}
-
 		?>
 <div data-dojo-type="dijit/layout/AccordionContainer" style="height:100%;">
 	<div data-dojo-type="dijit/layout/ContentPane" title="<?php print __('Preferences'); ?>" selected="true">
@@ -298,16 +291,6 @@ class ff_FeedCleaner extends Plugin {
 			><?php echo htmlspecialchars($json_conf, ENT_NOQUOTES, 'UTF-8');?></textarea>
 	</td></tr></table>
 
-	<table width='30%' style="border:3px ridge grey;"><tr>
-		<td width="95%">
-		<label for="debug_id"><?php echo __("Enable extended logging");?></label>
-		</td>
-		<td class="prefValue">
-			<input data-dojo-type="dijit/form/CheckBox" type="checkbox" name="debug" id="debug_id"
-				<?php print $debugChecked;?>>
-		</td>
-		</tr>
-	</table>
 	<p><button data-dojo-type="dijit/form/Button" type="submit"><?php print __("Save");?></button></p>
 	</form>
 	</div>
@@ -354,7 +337,6 @@ class ff_FeedCleaner extends Plugin {
 		}
 
 		$this->host->set($this, 'json_conf', $json_conf);
-		$this->host->set($this, 'debug', checkbox_to_sql_bool($_POST["debug"]));
 
 		echo __("Configuration saved.");
 	}
