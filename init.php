@@ -254,8 +254,48 @@ class ff_FeedCleaner extends Plugin {
 	// TODO switch to data-dojo-type: other attributes should be moved to data-dojo-props?
 	function hook_prefs_tabs() {
 		print '<div id="' . strtolower(get_class()) . '_ConfigTab" data-dojo-type="dijit/layout/ContentPane"
-			href="backend.php?op=pluginhandler&plugin=' . strtolower(get_class()) . '&method=index"
+			href="backend.php?op=pluginhandler&plugin=' . strtolower(get_class()) . '"
 			title="' . __('FeedCleaner') . '"></div>';
+		print <<<'EOT'
+<script>
+async function fetch_backend(values) {
+	const req = new Request('backend.php', {method: "POST", body: new URLSearchParams(values)});
+
+	try {
+		const response = await fetch(req);
+		if(! response.ok) {
+			Notify.error(`HTTP error ${response.status} for ${req.url}: check error console.`);
+			console.error(req, response);
+			return;
+		}
+
+		var answer = await response.json();  // it's const, but JS…
+	} catch(e) {
+		console.error(e);
+		Notify.error('Error while fetching. Check console for details.');
+		return;
+	}
+
+	if(answer.hasOwnProperty('error') ) {  // ttrss errors
+		Notify.error(answer.error.message);
+		console.error(answer);
+		return;
+	}
+
+	if(answer.hasOwnProperty('errMsg')) {  // our own errors
+		Notify.error(answer.errMsg);
+		console.error(answer);
+		return;
+	}
+
+	if(answer.hasOwnProperty('msg')) {
+		Notify.info(answer.msg);
+	}
+
+	return answer;
+}
+</script>
+EOT;
 	}
 
 
@@ -275,13 +315,8 @@ class ff_FeedCleaner extends Plugin {
 			values.op = "pluginhandler";
 			values.method = "save";
 			values.plugin = "<?php print strtolower(get_class());?>";
-			new Ajax.Request('backend.php', {
-				parameters: dojo.objectToQuery(values),
-				onComplete: function(transport) {
-					if (transport.responseText.indexOf('error: ') >= 0) Notify.error(transport.responseText);
-					else Notify.info(transport.responseText);
-				}
-			});
+
+			(async () => { await fetch_backend(values); })();
 			//this.reset();
 		}
 	</script>
@@ -295,7 +330,7 @@ class ff_FeedCleaner extends Plugin {
 	</form>
 	</div>
 
-	<div data-dojo-type="dijit/layout/ContentPane" title="<?php print __('Show Diff'); ?>">
+	<div data-dojo-type="dijit/layout/ContentPane" title="<?php print __('Diff Preview'); ?>">
 	<form data-dojo-type="dijit/form/Form">
 		<script type="dojo/method" data-dojo-event="onSubmit" data-dojo-args="evt">
 			evt.preventDefault();
@@ -305,16 +340,14 @@ class ff_FeedCleaner extends Plugin {
 				values.op = "pluginhandler";
 				values.method = "preview";
 				values.plugin = "<?php print strtolower(get_class());?>";
-				new Ajax.Request('backend.php', {
-					parameters: dojo.objectToQuery(values),
-					onComplete: function(transport) {
-						if (transport.responseText.indexOf('error: ') >= 0) Notify.error(transport.responseText);
-						else {
-							var preview = document.getElementById("preview");
-							preview.innerHTML = transport.responseText;//textContent
-						}
-					}
-				});
+
+				(async () => {
+					const answer = await fetch_backend(values);
+					if(! answer || ! answer.hasOwnProperty("content")) return;
+
+					const preview = document.getElementById("preview");
+					preview.innerHTML = answer.content;
+				})();
 				//this.reset();
 			}
 		</script>
@@ -332,13 +365,13 @@ class ff_FeedCleaner extends Plugin {
 		$json_conf = $_POST['json_conf'];
 
 		if (is_null(json_decode($json_conf))) {
-			echo __("error: Invalid JSON!");
+			echo json_encode(["errMsg" => __("Invalid JSON. Possible Reason: ") . json_last_error_msg()]);
 			return false;
 		}
 
 		$this->host->set($this, 'json_conf', $json_conf);
 
-		echo __("Configuration saved.");
+		echo json_encode(["msg" => __("Configuration saved.")]);
 	}
 
 	// diff stuff
@@ -357,12 +390,11 @@ class ff_FeedCleaner extends Plugin {
 		$url = $_POST['url'];
 		$conf = $_POST['json_conf'];
 
-		// TODO The output should be better structured, the check with 'error:' is a bit clumsy
 		try {
 			$diff = self::compute_diff($url, $conf);
-			print self::format_diff_array_html($diff);
+			print json_encode(["content" => self::format_diff_array_html($diff)]);
 		} catch (RuntimeException $e) {
-			print "error: " . $e->getMessage();
+			print json_encode(["errMsg" => $e->getMessage()]);
 		}
 	}
 
