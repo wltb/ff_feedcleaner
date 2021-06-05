@@ -251,9 +251,9 @@ class ff_FeedCleaner extends Plugin {
 
 
 	//gui hook stuff
-	function hook_prefs_tabs($args)
-	{
-		print '<div id="' . strtolower(get_class()) . '_ConfigTab" dojoType="dijit.layout.ContentPane"
+	// TODO switch to data-dojo-type: other attributes should be moved to data-dojo-props?
+	function hook_prefs_tabs() {
+		print '<div id="' . strtolower(get_class()) . '_ConfigTab" data-dojo-type="dijit/layout/ContentPane"
 			href="backend.php?op=pluginhandler&plugin=' . strtolower(get_class()) . '&method=index"
 			title="' . __('FeedCleaner') . '"></div>';
 	}
@@ -273,9 +273,9 @@ class ff_FeedCleaner extends Plugin {
 		?>
 <div data-dojo-type="dijit/layout/AccordionContainer" style="height:100%;">
 	<div data-dojo-type="dijit/layout/ContentPane" title="<?php print __('Preferences'); ?>" selected="true">
-	<form dojoType="dijit.form.Form" accept-charset="UTF-8" style="overflow:auto;"
+	<form data-dojo-type="dijit/form/Form" accept-charset="UTF-8" style="overflow:auto;"
 	id="feedcleaner_settings">
-	<script type="dojo/method" event="onSubmit" args="evt">
+	<script type="dojo/method" data-dojo-event="onSubmit" data-dojo-args="evt">
 		evt.preventDefault();
 		if (this.validate()) {
 			var values = this.getValues();
@@ -285,7 +285,7 @@ class ff_FeedCleaner extends Plugin {
 			new Ajax.Request('backend.php', {
 				parameters: dojo.objectToQuery(values),
 				onComplete: function(transport) {
-					if (transport.responseText.indexOf('error: ') == 0) Notify.error(transport.responseText);
+					if (transport.responseText.indexOf('error: ') >= 0) Notify.error(transport.responseText);
 					else Notify.info(transport.responseText);
 				}
 			});
@@ -293,7 +293,7 @@ class ff_FeedCleaner extends Plugin {
 		}
 	</script>
 	<table width='100%'><tr><td>
-		<textarea dojoType="dijit.form.SimpleTextarea" name="json_conf"
+		<textarea data-dojo-type="dijit/form/SimpleTextarea" name="json_conf"
 			style="font-size: 12px; width: 99%; height: 500px;"
 			><?php echo htmlspecialchars($json_conf, ENT_NOQUOTES, 'UTF-8');?></textarea>
 	</td></tr></table>
@@ -303,18 +303,18 @@ class ff_FeedCleaner extends Plugin {
 		<label for="debug_id"><?php echo __("Enable extended logging");?></label>
 		</td>
 		<td class="prefValue">
-			<input dojoType="dijit.form.CheckBox" type="checkbox" name="debug" id="debug_id"
+			<input data-dojo-type="dijit/form/CheckBox" type="checkbox" name="debug" id="debug_id"
 				<?php print $debugChecked;?>>
 		</td>
 		</tr>
 	</table>
-	<p><button dojoType="dijit.form.Button" type="submit"><?php print __("Save");?></button></p>
+	<p><button data-dojo-type="dijit/form/Button" type="submit"><?php print __("Save");?></button></p>
 	</form>
 	</div>
 
 	<div data-dojo-type="dijit/layout/ContentPane" title="<?php print __('Show Diff'); ?>">
-	<form dojoType="dijit.form.Form">
-		<script type="dojo/method" event="onSubmit" args="evt">
+	<form data-dojo-type="dijit/form/Form">
+		<script type="dojo/method" data-dojo-event="onSubmit" data-dojo-args="evt">
 			evt.preventDefault();
 			if (this.validate()) {
 				var values = this.getValues();
@@ -325,7 +325,7 @@ class ff_FeedCleaner extends Plugin {
 				new Ajax.Request('backend.php', {
 					parameters: dojo.objectToQuery(values),
 					onComplete: function(transport) {
-						if (transport.responseText.indexOf('error: ')==0) Notify.error(transport.responseText);
+						if (transport.responseText.indexOf('error: ') >= 0) Notify.error(transport.responseText);
 						else {
 							var preview = document.getElementById("preview");
 							preview.innerHTML = transport.responseText;//textContent
@@ -335,7 +335,7 @@ class ff_FeedCleaner extends Plugin {
 				//this.reset();
 			}
 		</script>
-		URL: <input dojoType="dijit.form.TextBox" name="url"> <button dojoType="dijit.form.Button" type="submit"><?php print __("Preview"); ?></button>
+		URL: <input data-dojo-type="dijit/form/TextBox" name="url"> <button data-dojo-type="dijit/form/Button" type="submit"><?php print __("Preview"); ?></button>
 	</form>
 	<div id="preview" style="border:2px solid grey; min-height:2cm; max-width: 30cm;"><?php print __("Preview"); ?></div>
 	</div>
