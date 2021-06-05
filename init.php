@@ -259,7 +259,7 @@ class ff_FeedCleaner extends Plugin {
 	function hook_prefs_tabs() {
 		print '<div id="' . strtolower(get_class()) . '_ConfigTab" data-dojo-type="dijit/layout/ContentPane"
 			href="backend.php?op=pluginhandler&plugin=' . strtolower(get_class()) . '"
-			title="' . __('FeedCleaner') . '"></div>';
+			title="<i class=\'material-icons\' style=\'margin-right:2px\'>brush</i>' . __('FeedCleaner') . '"></div>';
 		print <<<'EOT'
 <script>
 async function fetch_backend(values) {
