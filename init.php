@@ -17,6 +17,10 @@ class ff_FeedCleaner extends Plugin {
 		return 2;
 	}
 
+	function csrf_ignore($method) {
+		return true;
+	}
+
 
 	function init($host) {
 		$this->host = $host;
@@ -424,7 +428,7 @@ EOT;
 		/* see http://stackoverflow.com/questions/321294/ or https://github.com/chrisboulton/php-diff
 		or https://github.com/sebastianbergmann/diff
 		*/
-		$con = fetch_file_contents($url);
+		$con = UrlHelper::fetch($url);
 		if(!$con) throw new RuntimeException("Couldn't fetch $url");
 
 		// could throw Exception
