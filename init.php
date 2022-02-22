@@ -261,55 +261,22 @@ class ff_FeedCleaner extends Plugin {
 		self::debug("Applied (pattern '$pat', replacement '$rep')  $counter times");
 	}
 
+	function get_pref_js() {
+		return file_get_contents(__DIR__ . '/BackendComm.js');
+	}
 
 	//gui hook stuff
-	// TODO switch to data-dojo-type: other attributes should be moved to data-dojo-props?
 	function hook_prefs_tabs() {
-		print '<div id="' . strtolower(get_class()) . '_ConfigTab" data-dojo-type="dijit/layout/ContentPane"
-			href="backend.php?op=pluginhandler&plugin=' . strtolower(get_class()) . '"
-			title="<i class=\'material-icons\' style=\'margin-right:2px\'>brush</i>' . __('FeedCleaner') . '"></div>';
-		print <<<'EOT'
+		?>
+<div id="<?= strtolower(get_class()) . '_ConfigTab';?>" data-dojo-type="dijit/layout/ContentPane"
+ data-dojo-props="href: 'backend.php?op=pluginhandler&plugin=<?= strtolower(get_class()); ?>'"
+ title="<i class='material-icons' style='margin-right: 2px'>brush</i><span>FeedCleaner</span>"></div>;
 <script>
-async function fetch_backend(values) {
-	const req = new Request('backend.php', {method: "POST", body: new URLSearchParams(values)});
-
-	try {
-		const response = await fetch(req);
-		if(! response.ok) {
-			Notify.error(`HTTP error ${response.status} for ${req.url}: check error console.`);
-			console.error(req, response);
-			return;
-		}
-
-		var answer = await response.json();  // it's const, but JS…
-	} catch(e) {
-		console.error(e);
-		Notify.error('Error while fetching. Check console for details.');
-		return;
-	}
-
-	if(answer.hasOwnProperty('error') ) {  // ttrss errors
-		Notify.error(answer.error.message);
-		console.error(answer);
-		return;
-	}
-
-	if(answer.hasOwnProperty('errMsg')) {  // our own errors
-		Notify.error(answer.errMsg);
-		console.error(answer);
-		return;
-	}
-
-	if(answer.hasOwnProperty('msg')) {
-		Notify.info(answer.msg);
-	}
-
-	return answer;
-}
+	const fffc_comm = new BackendComm("<?= strtolower(get_class());?>");
 </script>
-EOT;
-	}
 
+<?php
+	}
 
 	function index() {
 		$pluginhost = PluginHost::getInstance();
@@ -317,61 +284,44 @@ EOT;
 
 		?>
 <div data-dojo-type="dijit/layout/AccordionContainer" style="height:100%;">
-	<div data-dojo-type="dijit/layout/ContentPane" title="<?php print __('Preferences'); ?>" selected="true">
+	<div data-dojo-type="dijit/layout/ContentPane" title="<?= __('Preferences'); ?>" selected="true">
 	<form data-dojo-type="dijit/form/Form" accept-charset="UTF-8" style="overflow:auto;"
 	id="feedcleaner_settings">
 	<script type="dojo/method" data-dojo-event="onSubmit" data-dojo-args="evt">
 		evt.preventDefault();
-		if (this.validate()) {
-			var values = this.getValues();
-			values.op = "pluginhandler";
-			values.method = "save";
-			values.plugin = "<?php print strtolower(get_class());?>";
-
-			(async () => { await fetch_backend(values); })();
-			//this.reset();
-		}
+		fffc_comm.post_notify("save", {}, this);
 	</script>
 	<table width='100%'><tr><td>
 		<textarea data-dojo-type="dijit/form/SimpleTextarea" name="json_conf"
 			style="font-size: 12px; width: 99%; height: 500px;"
-			><?php echo htmlspecialchars($json_conf, ENT_NOQUOTES, 'UTF-8');?></textarea>
+			><?= htmlspecialchars($json_conf, ENT_NOQUOTES, 'UTF-8');?></textarea>
 	</td></tr></table>
 
-	<p><button data-dojo-type="dijit/form/Button" type="submit"><?php print __("Save");?></button></p>
+	<p><button data-dojo-type="dijit/form/Button" type="submit"><?= __("Save");?></button></p>
 	</form>
 	</div>
 
-	<div data-dojo-type="dijit/layout/ContentPane" title="<?php print __('Diff Preview'); ?>">
+	<div data-dojo-type="dijit/layout/ContentPane" title="<?= 'Diff ' . __('Preview'); ?>">
 	<form data-dojo-type="dijit/form/Form">
 		<script type="dojo/method" data-dojo-event="onSubmit" data-dojo-args="evt">
 			evt.preventDefault();
-			if (this.validate()) {
-				var values = this.getValues();
-				values.json_conf = dijit.byId("feedcleaner_settings").value.json_conf;
-				values.op = "pluginhandler";
-				values.method = "preview";
-				values.plugin = "<?php print strtolower(get_class());?>";
-
-				(async () => {
-					const answer = await fetch_backend(values);
-					if(! answer || ! answer.hasOwnProperty("content")) return;
-
-					const preview = document.getElementById("preview");
-					preview.innerHTML = answer.content;
-				})();
-				//this.reset();
-			}
+			const ob = {json_conf: dijit.byId("feedcleaner_settings").value.json_conf};
+			const preview = document.getElementById("preview");
+			(async () => {
+				const answer = await fffc_comm.post_notify("preview", ob, this);
+				if(! answer || ! answer.hasOwnProperty("content")) return;
+				preview.innerHTML = answer.content;
+			})();
 		</script>
-		URL: <input data-dojo-type="dijit/form/TextBox" name="url"> <button data-dojo-type="dijit/form/Button" type="submit"><?php print __("Preview"); ?></button>
+		URL: <input data-dojo-type="dijit/form/TextBox" name="url">
+		<button data-dojo-type="dijit/form/Button" type="submit"><?= __("Preview"); ?></button>
 	</form>
-	<div id="preview" style="border:2px solid grey; min-height:2cm; max-width: 30cm;"><?php print __("Preview"); ?></div>
+	<div id="preview" style="border:2px solid grey; min-height:2cm; max-width: 30cm;"><?= __("Preview"); ?></div>
 	</div>
 </div>
 
 <?php
 	}
-
 
 	function save() {
 		$json_conf = $_POST['json_conf'];
@@ -437,7 +387,7 @@ EOT;
 		or https://github.com/sebastianbergmann/diff
 		*/
 		$con = UrlHelper::fetch($url);
-		if(!$con) throw new RuntimeException("Couldn't fetch $url");
+		if(!$con) throw new RuntimeException("Couldn't fetch '$url'");
 
 		// could throw Exception
 		list($feed_data, $config_data) = self::hook1($con, $url, $json_data);
@@ -466,6 +416,6 @@ EOT;
 
 		//var_dump($diff);
 		if($res <= 1) return $diff;
-		else throw new RuntimeException("Error computing diff");
+		else throw new RuntimeException("Error computing diff: Status $res");
 	}
 }
