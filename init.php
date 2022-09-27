@@ -43,14 +43,14 @@ class ff_FeedCleaner extends Plugin {
 		}
 		$msg = static::escape($msg);
 
-		Debug::log($msg, Debug::$LOG_VERBOSE);
+		Debug::log($msg, Debug::LOG_VERBOSE);
 		// TODO maybe try to detect the log destination to choose the necessary escaping?
 		if(is_int($prio)) trigger_error($msg, $prio);
 	}
 
 
 	//implement fetch hooks
-	function hook_feed_fetched($feed_data, $fetch_url) {
+	function hook_feed_fetched($feed_data, $fetch_url, $owner_uid, $feed) {
 		$json_conf = $this->host->get($this, 'json_conf');
 
 		try {
@@ -108,9 +108,9 @@ class ff_FeedCleaner extends Plugin {
 	}
 
 
-	function hook_feed_parsed($rss) {
+	function hook_feed_parsed($parser, $feed_id) {
 		if(! $this->feed_parsed) return;  // TODO rename this !
-		self::hook2($rss, $this->feed_parsed);
+		self::hook2($parser, $this->feed_parsed);
 	}
 
 
@@ -148,7 +148,7 @@ class ff_FeedCleaner extends Plugin {
 			$p_elem->setAccessible(true);
 		}
 		//  TODO link may be relative
-		//  rewrite_relative_url($site_url, $item->get_link());
+		//  URLHelper::rewrite_relative($site_url, $item->get_link());
 
 		$counter = 0;
 		foreach($rss->get_items() as $item_caps) {
@@ -326,7 +326,7 @@ class ff_FeedCleaner extends Plugin {
 	function save() {
 		$json_conf = $_POST['json_conf'];
 
-		if (is_null(json_decode($json_conf))) {
+		if(is_null(json_decode($json_conf))) {
 			echo json_encode(["errMsg" => __("Invalid JSON. Possible Reason: ") . json_last_error_msg()]);
 			return false;
 		}
