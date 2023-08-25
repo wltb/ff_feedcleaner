@@ -1,5 +1,5 @@
-if(typeof BackendComm === 'undefined') {
-	var BackendComm = class{
+if(typeof BackendCommFC === 'undefined') {
+	var BackendCommFC = class{
 		#plugin;
 		#params = {};
 		constructor(plugin) {
@@ -80,7 +80,7 @@ if(typeof BackendComm === 'undefined') {
 			if(node) this.add_dojo_params(node);
 			this.add_params(params);
 			const prom = this.send_post_request(method);
-			return BackendComm.process_request(prom);
+			return this.constructor.process_request(prom);
 		}
 	};
 }

@@ -261,18 +261,18 @@ class ff_FeedCleaner extends Plugin {
 		self::debug("Applied (pattern '$pat', replacement '$rep')  $counter times");
 	}
 
-	function get_pref_js() {
+	function get_prefs_js() {
 		return file_get_contents(__DIR__ . '/BackendComm.js');
 	}
 
 	//gui hook stuff
 	function hook_prefs_tabs() {
 		?>
-<div id="<?= strtolower(get_class()) . '_ConfigTab';?>" data-dojo-type="dijit/layout/ContentPane"
- data-dojo-props="href: 'backend.php?op=pluginhandler&plugin=<?= strtolower(get_class()); ?>'"
+<div id="<?= strtolower(self::class) . '_ConfigTab';?>" data-dojo-type="dijit/layout/ContentPane"
+ data-dojo-props="href: 'backend.php?op=pluginhandler&plugin=<?= strtolower(self::class); ?>'"
  title="<i class='material-icons' style='margin-right: 2px'>brush</i><span>FeedCleaner</span>"></div>;
-<script>
-	const fffc_comm = new BackendComm("<?= strtolower(get_class());?>");
+<script type="text/javascript">
+	const fffc_comm = new BackendCommFC("<?= strtolower(self::class);?>");
 </script>
 
 <?php
@@ -313,7 +313,7 @@ class ff_FeedCleaner extends Plugin {
 				preview.innerHTML = answer.content;
 			})();
 		</script>
-		URL: <input data-dojo-type="dijit/form/TextBox" name="url">
+		URL: <input data-dojo-type="dijit/form/TextBox" name="url" type="url">
 		<button data-dojo-type="dijit/form/Button" type="submit"><?= __("Preview"); ?></button>
 	</form>
 	<div id="preview" style="border:2px solid grey; min-height:2cm; max-width: 30cm;"><?= __("Preview"); ?></div>
