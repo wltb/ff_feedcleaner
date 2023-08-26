@@ -28,6 +28,8 @@ class ff_FeedCleaner extends Plugin {
 		$host->add_hook($host::HOOK_PREFS_TABS, $this);
 		$host->add_hook($host::HOOK_FEED_FETCHED, $this);
 		$host->add_hook($host::HOOK_FEED_PARSED, $this);
+
+		Config::add('DIFF_CMD', 'diff -U 0 -s -w');
 	}
 
 
@@ -402,7 +404,7 @@ class ff_FeedCleaner extends Plugin {
 		return $filename;
 	}
 
-	const diff_cmd = 'diff -U 0 -s -w ';
+	# Here used to be a constant that defined the diff command. It can now be changed in the global config file.
 
 	/**
 	 * Compute a diff between original feed data found under *$url*,
@@ -444,7 +446,7 @@ class ff_FeedCleaner extends Plugin {
 		$new_file = self::format_save_tmp($new_feed_data);
 		$diff = [];
 		$res = 2;
-		exec(self::diff_cmd . " $old_file $new_file", $diff, $res);
+		exec(Config::get('DIFF_CMD') . " $old_file $new_file", $diff, $res);
 		unlink($old_file);
 		unlink($new_file);
 

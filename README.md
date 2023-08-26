@@ -141,7 +141,7 @@ and the *pre* entries are the prefixes to be used in the path queries.
 If the *namespaces* key is present, the automatic namespace detection is disabled.
 
 **Important**:
-Since this plugin uses the DOMXPath object that is constructed by the FeedParser class of Tiny Tiny RSS, there are already some registered namespaces, and you should **not** override their prefixes. Check the definition of the FeedParser class for details. 
+Since this plugin uses the DOMXPath object that is constructed by the FeedParser class of Tiny Tiny RSS, there are already some registered namespaces, and you should **not** override their prefixes. Check the definition of the FeedParser class for details.
 
 ### Type link\_regex
 This type allows an easy manipulation of the links that Tiny Tiny RSS extracts for the feed items.
@@ -198,11 +198,11 @@ This feature is still a little rough around the edges, e.g. there may be problem
 
 Some technical details: Currently, the unix diff CLI tool is used, so on machines without it, this will not work.
 The right hand side (marked with **+** in the screenshot) is the modified feed, and the left hand side the original one.
-The diff command used is defined in the class constant *diff_cmd* and can be changed for more context etc.
-The preview does not load any other plugins, so the actual feed parsed by Tiny Tiny RSS may have other modifications besides the one shown in the preview.
+The diff command used can be changed (for more context et. al.) by overriding the environment variable *DIFF_CMD*.
+The preview does not load any other plugins, so the actual parse result in Tiny Tiny RSS may have other modifications besides the one shown in the preview.
 
 ## Logging to the feed debugger
 Changes applied to a feed are logged to Tiny Tiny RSS'es feed debugger, which can be accessed by a right click on the feed in the main UI, or by pressing f-D while having the feed selected. Additionally, encountered errors will be logged to the default log destination as *E\_USER_WARNING*s.
 
 
-The log messages are escaped with [htmlspecialchars](https://www.php.net/manual/en/function.htmlspecialchars.php) to prepare them for html output (which is used by the feed debugger or the built-in System Log). For other log destinations, e.g. syslog or a web server log, the messages may look a bit strange then, but this shouldn't happen too often anyway.
+The log messages are escaped with [htmlspecialchars](https://www.php.net/manual/function.htmlspecialchars.php) to prepare them for html output (which is used by the feed debugger or the built-in System Log). For other log destinations, e.g. syslog or a web server log, the messages may look a bit strange then, but this shouldn't happen too often anyway.
