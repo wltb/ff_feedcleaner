@@ -287,7 +287,7 @@ class ff_FeedCleaner extends Plugin {
  data-dojo-props="href: 'backend.php?op=pluginhandler&plugin=<?= strtolower(self::class); ?>'"
  title="<i class='material-icons' style='margin-right: 2px'>brush</i><span>FeedCleaner</span>"></div>;
 <script type="text/javascript">
-	const fffc_comm = new BackendCommFC("<?= strtolower(self::class);?>");
+	const fffc_comm = new BackendCommFC("<?= self::class;?>");
 </script>
 
 <?php
@@ -324,8 +324,8 @@ class ff_FeedCleaner extends Plugin {
 			const preview = document.getElementById("preview");
 			(async () => {
 				const answer = await fffc_comm.post_notify("preview", ob, this);
-				if(! answer || ! answer.hasOwnProperty("content")) return;
-				preview.innerHTML = answer.content;
+				const content = answer?.proc?.content ?? null;
+				if(content) preview.innerHTML = content;
 			})();
 		</script>
 		URL: <input data-dojo-type="dijit/form/TextBox" name="url" type="url">
@@ -342,13 +342,13 @@ class ff_FeedCleaner extends Plugin {
 		$json_conf = $_POST['json_conf'] ?? null;
 
 		if(is_null(json_decode($json_conf))) {
-			echo json_encode(["errMsg" => __("Invalid JSON. Possible Reason: ") . json_last_error_msg()]);
+			echo json_encode(["notifyError" => __("Invalid JSON. Possible Reason: ") . json_last_error_msg()]);
 			return;
 		}
 
 		$this->host->set($this, 'json_conf', $json_conf);
 
-		echo json_encode(["msg" => __("Configuration saved.")]);
+		echo json_encode(["notify" => __("Configuration saved.")]);
 	}
 
 	// diff stuff
@@ -374,7 +374,7 @@ class ff_FeedCleaner extends Plugin {
 
 		try {
 			$diff = self::compute_diff($url, $conf);
-			print json_encode(["content" => self::format_diff_array_html($diff)]);
+			print json_encode(["proc" => ["content" => self::format_diff_array_html($diff)]]);
 		} catch (RuntimeException $e) {
 			print json_encode(["errMsg" => $e->getMessage()]);
 		}
