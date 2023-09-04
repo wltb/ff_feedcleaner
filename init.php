@@ -293,12 +293,10 @@ class ff_FeedCleaner extends Plugin {
 </script>
 
 <style>
-div#<?= self::HTML_ID;?> div#preview {
+div#<?= self::HTML_ID;?> #preview {
 	border:2px solid grey;
 	max-width: 30cm;
 }
-
-div#<?= self::HTML_ID;?> div#preview * {max-width: 98%;}
 
 div#<?= self::HTML_ID;?> .UrlBox.dijitTextBox {
 	min-width: 48em;
@@ -343,24 +341,30 @@ div#<?= self::HTML_ID;?> form#feedcleaner_settings table {width: 100%;}
 	</div>
 
 	<div data-dojo-type="dijit/layout/ContentPane" title="<?= 'Diff ' . __('Preview'); ?>">
-	<form data-dojo-type="dijit/form/Form">
+	<form data-dojo-type="dijit/form/Form" id="DiffPreviewForm">
 		<script type="dojo/method" data-dojo-event="onSubmit" data-dojo-args="evt">
 			evt.preventDefault();
 			const ob = {json_conf: document.forms["feedcleaner_settings"].elements["json_conf"].value};
 
-			const preview = document.getElementById("preview");
-			preview.innerHTML = '';
-
 			(async () => {
 				const answer = await fffc_comm.post_notify("preview", ob, this);
-				const content = answer?.proc?.content ?? null;
-				if(content) preview.innerHTML = content;
+				const diff = answer?.proc?.diff ?? null;
+				const value = diff? diff.join(`\n`): '';  // we do joining on the client because newlines can be platform-dependent
+
+				// we shouldn't use plain DOM here (as we do above) because non-simple Textarea uses special dojo magic
+				const preview = dijit.byId("preview");
+				preview.set('value', value);
+				// dijit.byId is deprecated, this is new style:
+				//require(["dijit/registry"], function(registry){registry.byId('preview').set('value', value);})
 			})();
 		</script>
 		<span>URL: </span><input data-dojo-type="dijit/form/TextBox" name="url" type="url" data-dojo-props="class: 'UrlBox'">
 		<button data-dojo-type="dijit/form/Button" type="submit"><?= __("Preview"); ?></button>
 	</form>
-	<div id="preview"><?= __("Preview"); ?></div>
+	<section>
+		<textarea data-dojo-type="dijit/form/Textarea" id="preview" readonly form="DiffPreviewForm"
+		data-dojo-props="placeholder: '<?= __('Preview'); ?>'"></textarea>
+	</section>
 	</div>
 </div>
 
@@ -382,28 +386,12 @@ div#<?= self::HTML_ID;?> form#feedcleaner_settings table {width: 100%;}
 
 	// diff stuff
 
-	/**
-	 * Formats an array of strings into presentable HTML. Each entry becomes a line, seperated by <br>s.
-	 *
-	 * @param string[] $ar
-	 * @return string
-	 */
-	private static function format_diff_array_html(array $ar): string {
-		// TODO should make sure that everything is indeed utf-8.
-		// This may be not the case if below, the feed data is not loaded into a xml doc.
-		// (and not even then?)
-		$diff = array_map(fn (string $var) => htmlspecialchars($var, ENT_QUOTES, "UTF-8"), $ar); # TODO ENT_XML1 would be better?
-
-		return implode("<br/>", $diff);
-	}
-
 	public function preview(): void {
 		$url = $_POST['url'];
 		$conf = $_POST['json_conf'];
 
 		try {
-			$diff = self::compute_diff($url, $conf);
-			print json_encode(["proc" => ["content" => self::format_diff_array_html($diff)]]);
+			print json_encode(["proc" => ["diff" => self::compute_diff($url, $conf)]]);
 		} catch (RuntimeException $e) {
 			print json_encode(["errMsg" => $e->getMessage()]);
 		}
@@ -441,7 +429,7 @@ div#<?= self::HTML_ID;?> form#feedcleaner_settings table {width: 100%;}
 	 *
 	 * @param string $url
 	 * @param string $json_data
-	 * @return array
+	 * @return list<string>  returning a list makes client joining of the lines much easier.
 	 * @throws RuntimeException
 	 */
 	private static function compute_diff(string $url, string $json_data): array {
@@ -479,7 +467,6 @@ div#<?= self::HTML_ID;?> form#feedcleaner_settings table {width: 100%;}
 		unlink($old_file);
 		unlink($new_file);
 
-		//var_dump($diff);
 		if($res <= 1) return $diff;
 		else throw new RuntimeException("Error computing diff: Status $res");
 	}
