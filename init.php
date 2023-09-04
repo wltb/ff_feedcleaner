@@ -280,15 +280,38 @@ class ff_FeedCleaner extends Plugin {
 		return file_get_contents(__DIR__ . '/BackendComm.js');
 	}
 
+	private const HTML_ID = self::class . 'ConfigTab';
+
 	//gui hook stuff
 	function hook_prefs_tabs() {
 		?>
-<div id="<?= strtolower(self::class) . '_ConfigTab';?>" data-dojo-type="dijit/layout/ContentPane"
+<div id="<?= self::HTML_ID;?>" data-dojo-type="dijit/layout/ContentPane"
  data-dojo-props="href: 'backend.php?op=pluginhandler&plugin=<?= strtolower(self::class); ?>'"
  title="<i class='material-icons' style='margin-right: 2px'>brush</i><span>FeedCleaner</span>"></div>;
 <script type="text/javascript">
 	const fffc_comm = new BackendCommFC("<?= self::class;?>");
 </script>
+
+<style>
+div#<?= self::HTML_ID;?> div#preview {
+	border:2px solid grey;
+	max-width: 30cm;
+}
+
+div#<?= self::HTML_ID;?> div#preview * {max-width: 98%;}
+
+div#<?= self::HTML_ID;?> .UrlBox.dijitTextBox {
+	min-width: 48em;
+}
+
+div#<?= self::HTML_ID;?> textarea[name=json_conf] {
+	font-size: 10px;
+	width: 99%;
+	min-height: 550px;
+}
+
+div#<?= self::HTML_ID;?> form#feedcleaner_settings table {width: 100%;}
+</style>
 
 <?php
 	}
@@ -296,6 +319,8 @@ class ff_FeedCleaner extends Plugin {
 	public function index(): void {
 		$pluginhost = PluginHost::getInstance();
 		$json_conf = $pluginhost->get($this, 'json_conf');
+
+		header("Content-Type: text/html; charset=utf-8");
 
 		?>
 <div data-dojo-type="dijit/layout/AccordionContainer" style="height:100%;">
@@ -306,11 +331,12 @@ class ff_FeedCleaner extends Plugin {
 		evt.preventDefault();
 		fffc_comm.post_notify("save", {}, this);
 	</script>
-	<table width='100%'><tr><td>
+	<table>
+	<tr><td><!-- whitespace is significant in textarea -->
 		<textarea data-dojo-type="dijit/form/SimpleTextarea" name="json_conf"
-			style="font-size: 12px; width: 99%; height: 500px;"
 			><?= htmlspecialchars($json_conf, ENT_NOQUOTES, 'UTF-8');?></textarea>
-	</td></tr></table>
+	</td></tr>
+	</table>
 
 	<p><button data-dojo-type="dijit/form/Button" type="submit"><?= __("Save");?></button></p>
 	</form>
@@ -320,18 +346,21 @@ class ff_FeedCleaner extends Plugin {
 	<form data-dojo-type="dijit/form/Form">
 		<script type="dojo/method" data-dojo-event="onSubmit" data-dojo-args="evt">
 			evt.preventDefault();
-			const ob = {json_conf: dijit.byId("feedcleaner_settings").value.json_conf};
+			const ob = {json_conf: document.forms["feedcleaner_settings"].elements["json_conf"].value};
+
 			const preview = document.getElementById("preview");
+			preview.innerHTML = '';
+
 			(async () => {
 				const answer = await fffc_comm.post_notify("preview", ob, this);
 				const content = answer?.proc?.content ?? null;
 				if(content) preview.innerHTML = content;
 			})();
 		</script>
-		URL: <input data-dojo-type="dijit/form/TextBox" name="url" type="url">
+		<span>URL: </span><input data-dojo-type="dijit/form/TextBox" name="url" type="url" data-dojo-props="class: 'UrlBox'">
 		<button data-dojo-type="dijit/form/Button" type="submit"><?= __("Preview"); ?></button>
 	</form>
-	<div id="preview" style="border:2px solid grey; min-height:2cm; max-width: 30cm;"><?= __("Preview"); ?></div>
+	<div id="preview"><?= __("Preview"); ?></div>
 	</div>
 </div>
 
