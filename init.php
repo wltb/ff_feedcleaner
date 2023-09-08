@@ -64,7 +64,7 @@ class ff_FeedCleaner extends Plugin {
 
 		try {
 			list($feed_data, $this->feed_parsed) = self::hook1($feed_data, $fetch_url, $json_conf);
-		} catch (RuntimeException $e) {
+		} catch (RuntimeException|JsonException $e) {
 			self::debug($e->getMessage(), E_USER_WARNING);
 		}
 
@@ -77,16 +77,13 @@ class ff_FeedCleaner extends Plugin {
 	 *
 	 * @param string $feed_data
 	 * @param string $fetch_url
-	 * @param string $json_conf
+	 * @param mixed $json_conf
 	 * @return array{0: string, 1: array} first one is eventually modified feed data, second one is array of configs
 	 * @throws RuntimeException
+	 * @throws JsonException
 	 */
-	private static function hook1(string $feed_data, string $fetch_url, string $json_conf): array {
-		/** @psalm-suppress MixedAssignment */
-		$json_conf = json_decode($json_conf, true);
-		if (! $json_conf || ! is_array($json_conf)) {
-			throw new RuntimeException('No or malformed configuration stored. Possible cause: '. json_last_error_msg());
-		}
+	private static function hook1(string $feed_data, string $fetch_url, $json_conf): array {
+		$json_conf = self::check_json_conf($json_conf);
 
 		$later = array();
 		foreach($json_conf as $config) {
@@ -371,11 +368,32 @@ div#<?= self::HTML_ID;?> form#feedcleaner_settings table {width: 100%;}
 <?php
 	}
 
+	/**
+	 * Checks if its argument can be decoded into (useful) JSON, and returns it then. Throws Exceptions when not.
+	 *
+	 * More checking could be done, even a JSON Validation
+	 *
+	 * @param mixed $json
+	 * @return array
+	 * @throws RuntimeException
+	 * @throws JsonException
+	 * @psalm-assert string $json
+	 */
+	private static function check_json_conf($json) {
+		if(! is_string($json)) throw new RuntimeException("Not a string, can't decode JSON.");
+		$arr = json_decode($json, true, 512, JSON_THROW_ON_ERROR);
+		if(! is_array($arr)) throw new RuntimeException("JSON is valid, but not a useful config.");
+		return $arr;
+	}
+
 	public function save(): void {
 		$json_conf = $_POST['json_conf'] ?? null;
 
-		if(is_null(json_decode($json_conf))) {
-			echo json_encode(["notifyError" => __("Invalid JSON. Possible Reason: ") . json_last_error_msg()]);
+		try {
+			self::check_json_conf($json_conf);
+		} catch (RuntimeException|JsonException $err) {
+			$note = $err instanceof JsonException? __("Invalid") . " JSON: ": '';
+			echo json_encode(["notifyError" => $note . $err->getMessage()]);
 			return;
 		}
 
@@ -387,13 +405,19 @@ div#<?= self::HTML_ID;?> form#feedcleaner_settings table {width: 100%;}
 	// diff stuff
 
 	public function preview(): void {
-		$url = $_POST['url'];
-		$conf = $_POST['json_conf'];
+		$url = $_POST['url'] ?? null;
+		$conf = $_POST['json_conf'] ?? null;
+
+		if(! is_string($url)) {
+			echo json_encode(["notifyError" => __("Invalid URL.")]);
+			return;
+		}
 
 		try {
 			print json_encode(["proc" => ["diff" => self::compute_diff($url, $conf)]]);
-		} catch (RuntimeException $e) {
-			print json_encode(["errMsg" => $e->getMessage()]);
+		} catch (RuntimeException|JsonException $err) {
+			$note = $err instanceof JsonException? __("Invalid") . " JSON: ": '';
+			print json_encode(["notifyError" => $note . $err->getMessage()]);
 		}
 	}
 
@@ -416,7 +440,7 @@ div#<?= self::HTML_ID;?> form#feedcleaner_settings table {width: 100%;}
 		$res = $xml->loadXML($data);
 		$res2 = $xml->save($filename);
 
-		if(! $res || ! $res2) throw new RuntimeException("Coundn't write XML.");
+		if(! $res || ! $res2) throw new RuntimeException("Couldn't write XML.");
 
 		return $filename;
 	}
@@ -428,11 +452,12 @@ div#<?= self::HTML_ID;?> form#feedcleaner_settings table {width: 100%;}
 	 * and the feed after applying all modifications this plugin performs.
 	 *
 	 * @param string $url
-	 * @param string $json_data
+	 * @param mixed $json_data
 	 * @return list<string>  returning a list makes client joining of the lines much easier.
 	 * @throws RuntimeException
+	 * @throws JsonException
 	 */
-	private static function compute_diff(string $url, string $json_data): array {
+	private static function compute_diff(string $url, $json_data): array {
 		//TODO maybe use a library for computing the diff,
 		/* see http://stackoverflow.com/questions/321294/ or https://github.com/chrisboulton/php-diff
 		or https://github.com/sebastianbergmann/diff
