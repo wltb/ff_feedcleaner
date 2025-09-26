@@ -2,7 +2,7 @@ if(typeof BackendCommFC === 'undefined') {
 	var BackendCommFC = class{
 		#plugin;
 		static #backend = 'backend.php';
-		static #op = "pluginhandler";
+		static #op = "PluginHandler";
 		static #response_proc_funcs;
 		static {
 			this.#response_proc_funcs = {
@@ -119,7 +119,7 @@ if(typeof BackendCommFC === 'undefined') {
 			}
 			Object.assign(params_, params);
 			params_.op = this.constructor.#op;
-			params_.plugin = this.#plugin.toLowerCase();
+			params_.plugin = this.#plugin;
 			if(method) params_.method = method;
 
 			return new URLSearchParams(params_);

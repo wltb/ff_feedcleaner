@@ -283,7 +283,7 @@ class ff_FeedCleaner extends Plugin {
 	function hook_prefs_tabs() {
 		?>
 <div id="<?= self::HTML_ID;?>" data-dojo-type="dijit/layout/ContentPane"
- data-dojo-props="href: 'backend.php?op=pluginhandler&plugin=<?= strtolower(self::class); ?>'"
+ data-dojo-props="href: 'backend.php?op=PluginHandler&plugin=<?= self::class; ?>'"
  title="<i class='material-icons' style='margin-right: 2px'>brush</i><span>FeedCleaner</span>"></div>;
 <script type="text/javascript">
 	const fffc_comm = new BackendCommFC("<?= self::class;?>");
