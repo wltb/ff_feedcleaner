@@ -1,19 +1,4 @@
 # Tiny Tiny RSS plugin ff_feedcleaner
-## ToC
-
-*	[Introduction](#introduction)
-*	[Installation](#installation)
-	*	[Updating](#updating)
-*	[Configuration](#configuration)
-	*	[Type regex](#type-regex)
-	*	[Type xpath\_regex](#type-xpath\_regex)
-		*   [Namespaces](#namespaces)
-	*	[Type link\_regex](#type-link\_regex)
-	*	[Examples](#examples)
-	*	[Type utf-8](#type-utf-8)
-*	[Preview of modifications](#preview-of-modifications)
-*	[Logging to the feed debugger](#extended-logging)
-
 ## Introduction
 This is a plugin for [Tiny Tiny RSS](https://tt-rss.org/). It allows to modify the content of feeds before Tiny Tiny RSS parses them.
 Currently, the emphasis is on applying [regular expressions](http://www.php.net/manual/en/book.pcre.php) to the feed data.
